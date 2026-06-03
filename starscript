@@ -1,0 +1,625 @@
+--[[
+    ===========================================================================
+    PROJECT     : VI HOEP | MOBILE BRING & COMBO SYSTEM (V6.0 PRO)
+    STYLE       : ULTRA DARK PURPLE NEON
+    FEATURES    : MOBILE SUPPORT, FLOATING ICON, TOUCH DRAG, DROPDOWN ARROW
+    ===========================================================================
+]]
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local HttpService = game:GetService("HttpService")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- ==========================================
+-- إعدادات النظام الأساسية والحفظ التلقائي
+-- ==========================================
+local ConfigFileName = "VI_HOEP_MobileConfig.json"
+
+local Config = {
+    TargetPlayer = "ALL",
+    SelectedKey = Enum.KeyCode.One,
+    ActionDelay = 0,
+    BringDistance = -4,
+    SpamBringEnabled = false,
+    ShowStats = true,
+    SeqComboEnabled = false,
+    SeqComboDelay = 2.0
+}
+
+local KeyMap = {
+    [1] = Enum.KeyCode.One,
+    [2] = Enum.KeyCode.Two,
+    [3] = Enum.KeyCode.Three,
+    [4] = Enum.KeyCode.Four
+}
+
+local UIColors = {
+    MenuColor = Color3.fromRGB(160, 32, 240),
+    MenuBackground = Color3.fromRGB(12, 6, 18),
+    DarkElement = Color3.fromRGB(30, 15, 40),
+    ActiveElement = Color3.fromRGB(160, 32, 240),
+    TextLight = Color3.fromRGB(220, 220, 220)
+}
+
+local function SaveSettings()
+    if writefile then
+        local saveTable = {}
+        for k, v in pairs(Config) do
+            if typeof(v) == "EnumItem" then
+                saveTable[k] = v.Name
+            else
+                saveTable[k] = v
+            end
+        end
+        pcall(function() writefile(ConfigFileName, HttpService:JSONEncode(saveTable)) end)
+    end
+end
+
+local function LoadSettings()
+    if readfile and isfile and isfile(ConfigFileName) then
+        pcall(function()
+            local data = HttpService:JSONDecode(readfile(ConfigFileName))
+            if data then
+                if data.TargetPlayer then Config.TargetPlayer = data.TargetPlayer end
+                if data.ActionDelay then Config.ActionDelay = data.ActionDelay end
+                if data.SpamBringEnabled ~= nil then Config.SpamBringEnabled = data.SpamBringEnabled end
+                if data.ShowStats ~= nil then Config.ShowStats = data.ShowStats end
+                if data.SeqComboEnabled ~= nil then Config.SeqComboEnabled = data.SeqComboEnabled end
+                if data.SeqComboDelay then Config.SeqComboDelay = data.SeqComboDelay end
+                if data.SelectedKey then Config.SelectedKey = Enum.KeyCode[data.SelectedKey] or Enum.KeyCode.One end
+            end
+        end)
+    end
+end
+LoadSettings()
+
+-- ==========================================
+-- دوال النظام الأساسية (Core Functions)
+-- ==========================================
+local function SimulateKeyPress(keyCode)
+    task.spawn(function()
+        VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
+        task.wait(0.05)
+        VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
+    end)
+end
+
+local function GetTargets()
+    local targets = {}
+    if Config.TargetPlayer == "ALL" then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then table.insert(targets, p) end
+        end
+    else
+        local p = Players:FindFirstChild(Config.TargetPlayer)
+        if p and p ~= LocalPlayer then table.insert(targets, p) end
+    end
+    return targets
+end
+
+local function TeleportTargets()
+    local myChar = LocalPlayer.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return end
+
+    local targetCFrame = myRoot.CFrame * CFrame.new(0, 0, Config.BringDistance)
+    local targets = GetTargets()
+
+    for _, player in ipairs(targets) do
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+            char.Humanoid.Sit = false
+            char.HumanoidRootPart.CFrame = targetCFrame
+        end
+    end
+end
+
+local function ExecuteBringCombo()
+    if Config.ActionDelay < 0 then
+        SimulateKeyPress(Config.SelectedKey)
+        task.wait(math.abs(Config.ActionDelay))
+        TeleportTargets()
+    elseif Config.ActionDelay > 0 then
+        TeleportTargets()
+        task.wait(Config.ActionDelay)
+        SimulateKeyPress(Config.SelectedKey)
+    else
+        SimulateKeyPress(Config.SelectedKey)
+        TeleportTargets()
+    end
+end
+
+-- ==========================================
+-- أنظمة التكرار (Spam & Sequences)
+-- ==========================================
+local SpamBringConnection = nil
+local function UpdateSpamBring()
+    if Config.SpamBringEnabled then
+        if not SpamBringConnection then
+            SpamBringConnection = RunService.Heartbeat:Connect(function() TeleportTargets() end)
+        end
+    else
+        if SpamBringConnection then
+            SpamBringConnection:Disconnect()
+            SpamBringConnection = nil
+        end
+    end
+    SaveSettings()
+end
+
+local SeqComboRunning = false
+local function UpdateSeqCombo()
+    if Config.SeqComboEnabled then
+        if not SeqComboRunning then
+            SeqComboRunning = true
+            task.spawn(function()
+                while Config.SeqComboEnabled do
+                    for i = 1, 4 do
+                        if not Config.SeqComboEnabled then break end
+                        SimulateKeyPress(KeyMap[i])
+                        task.wait(Config.SeqComboDelay)
+                    end
+                end
+                SeqComboRunning = false
+            end)
+        end
+    else
+        SeqComboRunning = false
+    end
+    SaveSettings()
+end
+
+UpdateSpamBring()
+UpdateSeqCombo()
+
+-- ==========================================
+-- بناء واجهة المستخدم (Mobile UI Construction)
+-- ==========================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VI_HOEP_MOBILE_SYSTEM"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling 
+
+-- دالة السحب المخصصة للهواتف (Touch/Mouse Smooth Dragging)
+local function MakeDraggable(guiItem)
+    local dragging, dragInput, dragStart, startPos
+    guiItem.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiItem.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    guiItem.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            guiItem.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- الأيقونة العائمة للهواتف (Floating Toggle Icon)
+local ToggleIcon = Instance.new("TextButton", ScreenGui)
+ToggleIcon.Size = UDim2.new(0, 50, 0, 50)
+ToggleIcon.Position = UDim2.new(0, 20, 0, 20)
+ToggleIcon.BackgroundColor3 = UIColors.MenuBackground
+ToggleIcon.Text = "VI"
+ToggleIcon.TextColor3 = UIColors.MenuColor
+ToggleIcon.Font = Enum.Font.GothamBlack
+ToggleIcon.TextSize = 24
+ToggleIcon.ZIndex = 50
+Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(1, 0) -- جعلها دائرية
+local IconStroke = Instance.new("UIStroke", ToggleIcon)
+IconStroke.Color = UIColors.MenuColor
+IconStroke.Thickness = 2.5
+MakeDraggable(ToggleIcon)
+
+-- Main Menu Frame
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 420, 0, 380) -- تصغير الحجم قليلاً ليناسب الجوال
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -190)
+MainFrame.BackgroundColor3 = UIColors.MenuBackground
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ZIndex = 1
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Color = UIColors.MenuColor
+MainStroke.Thickness = 2
+MakeDraggable(MainFrame)
+
+ToggleIcon.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- Title
+local TitleBar = Instance.new("Frame", MainFrame)
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundTransparency = 1
+TitleBar.ZIndex = 2
+local TitleText = Instance.new("TextLabel", TitleBar)
+TitleText.Size = UDim2.new(1, 0, 1, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "VI HOEP | MOBILE SYSTEM"
+TitleText.TextColor3 = UIColors.MenuColor
+TitleText.Font = Enum.Font.GothamBlack
+TitleText.TextSize = 18
+TitleText.ZIndex = 2
+
+local Separator = Instance.new("Frame", MainFrame)
+Separator.Size = UDim2.new(1, 0, 0, 2)
+Separator.Position = UDim2.new(0, 0, 0, 40)
+Separator.BackgroundColor3 = UIColors.MenuColor
+Separator.ZIndex = 2
+
+-- Sidebar / Tabs
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 120, 1, -42)
+Sidebar.Position = UDim2.new(0, 0, 0, 42)
+Sidebar.BackgroundColor3 = Color3.fromRGB(18, 10, 25)
+Sidebar.ZIndex = 2
+Instance.new("UICorner", Sidebar)
+
+local TabContainer = Instance.new("Frame", MainFrame)
+TabContainer.Size = UDim2.new(1, -125, 1, -45)
+TabContainer.Position = UDim2.new(0, 125, 0, 45)
+TabContainer.BackgroundTransparency = 1
+TabContainer.ZIndex = 2
+
+local function CreateTabFrame()
+    local F = Instance.new("ScrollingFrame", TabContainer)
+    F.Size = UDim2.new(1, 0, 1, 0)
+    F.BackgroundTransparency = 1
+    F.ScrollBarThickness = 2
+    F.ScrollBarImageColor3 = UIColors.MenuColor
+    F.Visible = false
+    F.ZIndex = 3
+    local L = Instance.new("UIListLayout", F)
+    L.Padding = UDim.new(0, 12)
+    L.SortOrder = Enum.SortOrder.LayoutOrder
+    return F
+end
+
+local MainTab = CreateTabFrame()
+local SettingsTab = CreateTabFrame()
+
+local function SetupTabBtn(name, frame, yPos)
+    local btn = Instance.new("TextButton", Sidebar)
+    btn.Size = UDim2.new(0.9, 0, 0, 35)
+    btn.Position = UDim2.new(0.05, 0, 0, yPos)
+    btn.BackgroundColor3 = UIColors.DarkElement
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.GothamBold
+    btn.ZIndex = 3
+    Instance.new("UICorner", btn)
+    
+    btn.MouseButton1Click:Connect(function()
+        MainTab.Visible = false
+        SettingsTab.Visible = false
+        frame.Visible = true
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end)
+end
+
+SetupTabBtn("DASHBOARD", MainTab, 10)
+SetupTabBtn("SETTINGS", SettingsTab, 55)
+MainTab.Visible = true
+
+local function CreateLabel(parent, text)
+    local lbl = Instance.new("TextLabel", parent)
+    lbl.Size = UDim2.new(1, 0, 0, 20)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = UIColors.TextLight
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.ZIndex = 4
+    return lbl
+end
+
+-- ==========================================
+-- 1. نظام اختيار اللاعبين (مع سهم التحديد)
+-- ==========================================
+local DropdownContainer = Instance.new("Frame", MainTab)
+DropdownContainer.Size = UDim2.new(1, -10, 0, 40)
+DropdownContainer.BackgroundTransparency = 1
+DropdownContainer.ZIndex = 10
+
+local DropdownBtn = Instance.new("TextButton", DropdownContainer)
+DropdownBtn.Size = UDim2.new(1, 0, 1, 0)
+DropdownBtn.BackgroundColor3 = UIColors.DarkElement
+DropdownBtn.Text = "  Target: " .. Config.TargetPlayer
+DropdownBtn.TextColor3 = UIColors.MenuColor
+DropdownBtn.Font = Enum.Font.GothamBold
+DropdownBtn.TextSize = 14
+DropdownBtn.TextXAlignment = Enum.TextXAlignment.Left
+DropdownBtn.ZIndex = 11
+Instance.new("UICorner", DropdownBtn).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", DropdownBtn).Color = UIColors.MenuColor
+
+-- السهم السفلي للتوضيح
+local DropdownArrow = Instance.new("TextLabel", DropdownBtn)
+DropdownArrow.Size = UDim2.new(0, 30, 1, 0)
+DropdownArrow.Position = UDim2.new(1, -30, 0, 0)
+DropdownArrow.BackgroundTransparency = 1
+DropdownArrow.Text = "▼"
+DropdownArrow.TextColor3 = UIColors.MenuColor
+DropdownArrow.Font = Enum.Font.GothamBlack
+DropdownArrow.TextSize = 14
+DropdownArrow.ZIndex = 12
+
+local DropdownList = Instance.new("ScrollingFrame", MainTab)
+DropdownList.Size = UDim2.new(1, -10, 0, 120)
+DropdownList.BackgroundColor3 = UIColors.DarkElement
+DropdownList.BorderSizePixel = 0
+DropdownList.ScrollBarThickness = 4
+DropdownList.ScrollBarImageColor3 = UIColors.MenuColor
+DropdownList.Visible = false
+DropdownList.ZIndex = 15
+Instance.new("UICorner", DropdownList).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", DropdownList).Color = UIColors.MenuColor
+local DropdownLayout = Instance.new("UIListLayout", DropdownList)
+
+local function UpdatePlayerList()
+    for _, child in pairs(DropdownList:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local players = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then table.insert(players, p.Name) end
+    end
+    table.sort(players, function(a, b) return a:lower() < b:lower() end)
+    table.insert(players, 1, "ALL")
+
+    for _, name in ipairs(players) do
+        local btn = Instance.new("TextButton", DropdownList)
+        btn.Size = UDim2.new(1, 0, 0, 30)
+        btn.BackgroundTransparency = 1
+        btn.Text = "  " .. name
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 13
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.ZIndex = 20
+        
+        btn.MouseButton1Click:Connect(function()
+            Config.TargetPlayer = name
+            DropdownBtn.Text = "  Target: " .. name
+            DropdownList.Visible = false
+            DropdownArrow.Text = "▼"
+            SaveSettings()
+        end)
+    end
+    DropdownList.CanvasSize = UDim2.new(0, 0, 0, #players * 30)
+end
+
+DropdownBtn.MouseButton1Click:Connect(function()
+    DropdownList.Visible = not DropdownList.Visible
+    DropdownArrow.Text = DropdownList.Visible and "▲" or "▼"
+    if DropdownList.Visible then UpdatePlayerList() end
+end)
+Players.PlayerAdded:Connect(function() if DropdownList.Visible then UpdatePlayerList() end end)
+Players.PlayerRemoving:Connect(function() if DropdownList.Visible then UpdatePlayerList() end end)
+
+-- ==========================================
+-- 2. أزرار اختيار السكيلات (مرئية فقط)
+-- ==========================================
+CreateLabel(MainTab, " Select Tool/Skill to Auto-Press:")
+local KeyButtonsFrame = Instance.new("Frame", MainTab)
+KeyButtonsFrame.Size = UDim2.new(1, -10, 0, 40)
+KeyButtonsFrame.BackgroundTransparency = 1
+KeyButtonsFrame.ZIndex = 4
+
+local KeyButtons = {}
+local function CreateKeyButton(number, xPos)
+    local btn = Instance.new("TextButton", KeyButtonsFrame)
+    btn.Size = UDim2.new(0, 55, 0, 35)
+    btn.Position = UDim2.new(0, xPos, 0, 0)
+    btn.BackgroundColor3 = (Config.SelectedKey == KeyMap[number]) and UIColors.MenuColor or UIColors.DarkElement
+    btn.Text = "Tool " .. tostring(number)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBlack
+    btn.TextSize = 12
+    btn.ZIndex = 5
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    Instance.new("UIStroke", btn).Color = UIColors.MenuColor
+    
+    btn.MouseButton1Click:Connect(function()
+        Config.SelectedKey = KeyMap[number]
+        for _, b in pairs(KeyButtons) do b.BackgroundColor3 = UIColors.DarkElement end
+        btn.BackgroundColor3 = UIColors.MenuColor
+        SaveSettings()
+    end)
+    table.insert(KeyButtons, btn)
+end
+CreateKeyButton(1, 0); CreateKeyButton(2, 65); CreateKeyButton(3, 130); CreateKeyButton(4, 195)
+
+-- ==========================================
+-- 3. سلايدر التأخير للزر الواحد
+-- ==========================================
+local function CreateSlider(parent, title, min, max, defaultVal, isFloat, callback)
+    local SFrame = Instance.new("Frame", parent)
+    SFrame.Size = UDim2.new(1, -10, 0, 50)
+    SFrame.BackgroundTransparency = 1
+    SFrame.ZIndex = 4
+
+    local SLabel = CreateLabel(SFrame, "")
+    local SBG = Instance.new("Frame", SFrame)
+    SBG.Size = UDim2.new(1, 0, 0, 8)
+    SBG.Position = UDim2.new(0, 0, 0, 30)
+    SBG.BackgroundColor3 = Color3.fromRGB(40, 20, 60)
+    SBG.ZIndex = 5
+    Instance.new("UICorner", SBG).CornerRadius = UDim.new(1, 0)
+
+    local SFill = Instance.new("Frame", SBG)
+    SFill.BackgroundColor3 = UIColors.MenuColor
+    SFill.ZIndex = 6
+    Instance.new("UICorner", SFill).CornerRadius = UDim.new(1, 0)
+
+    local function SetValue(val)
+        local pct = math.clamp((val - min) / (max - min), 0, 1)
+        SFill.Size = UDim2.new(pct, 0, 1, 0)
+        if isFloat then
+            local displayVal = math.floor(val * 10 + 0.5) / 10
+            if title == "ActionTiming" then
+                if displayVal < 0 then SLabel.Text = " Timing: " .. math.abs(displayVal) .. "s BEFORE Bring"
+                elseif displayVal > 0 then SLabel.Text = " Timing: " .. displayVal .. "s AFTER Bring"
+                else SLabel.Text = " Timing: Same Time (0s)" end
+            else
+                SLabel.Text = title .. ": " .. displayVal .. "s"
+            end
+        else
+            SLabel.Text = title .. ": " .. math.floor(val)
+        end
+        callback(val)
+    end
+
+    SetValue(defaultVal)
+    local drag = false
+    SBG.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = true end end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then drag = false end end)
+    UserInputService.InputChanged:Connect(function(i)
+        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local inputPos = (i.UserInputType == Enum.UserInputType.Touch) and i.Position.X or Mouse.X
+            local pct = math.clamp((inputPos - SBG.AbsolutePosition.X) / SBG.AbsoluteSize.X, 0, 1)
+            local raw = min + (max - min) * pct
+            if isFloat then raw = math.floor(raw * 10 + 0.5) / 10 else raw = math.floor(raw + 0.5) end
+            SetValue(raw)
+        end
+    end)
+end
+
+CreateSlider(MainTab, "ActionTiming", -1.0, 1.0, Config.ActionDelay, true, function(v) 
+    Config.ActionDelay = v
+    SaveSettings()
+end)
+
+-- Execute Button
+local ExecuteBtn = Instance.new("TextButton", MainTab)
+ExecuteBtn.Size = UDim2.new(1, -10, 0, 45)
+ExecuteBtn.BackgroundColor3 = Color3.fromRGB(35, 10, 60)
+ExecuteBtn.Text = "EXECUTE COMBO (TAP)"
+ExecuteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ExecuteBtn.Font = Enum.Font.GothamBlack
+ExecuteBtn.TextSize = 16
+ExecuteBtn.ZIndex = 5
+Instance.new("UICorner", ExecuteBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", ExecuteBtn).Color = UIColors.MenuColor
+ExecuteBtn.MouseButton1Click:Connect(function() ExecuteBringCombo() end)
+
+-- ==========================================
+-- 4. أزرار السبام للهواتف
+-- ==========================================
+local function CreateToggleButton(parent, text, defaultState, activeColor, inactiveColor, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, -10, 0, 40)
+    btn.BackgroundColor3 = defaultState and activeColor or inactiveColor
+    btn.Text = text .. (defaultState and " : ON" or " : OFF")
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBlack
+    btn.TextSize = 14
+    btn.ZIndex = 5
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = defaultState and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    
+    local state = defaultState
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and activeColor or inactiveColor
+        btn.Text = text .. (state and " : ON" or " : OFF")
+        stroke.Color = state and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+        callback(state)
+    end)
+    return btn
+end
+
+CreateToggleButton(MainTab, "SPAM BRING", Config.SpamBringEnabled, Color3.fromRGB(15, 40, 15), Color3.fromRGB(40, 10, 15), function(state)
+    Config.SpamBringEnabled = state
+    UpdateSpamBring()
+end)
+
+CreateToggleButton(MainTab, "SEQ COMBO (1->2->3->4)", Config.SeqComboEnabled, Color3.fromRGB(15, 30, 50), Color3.fromRGB(30, 15, 20), function(state)
+    Config.SeqComboEnabled = state
+    UpdateSeqCombo()
+end)
+
+CreateSlider(MainTab, " Combo Delay", 0.1, 5.0, Config.SeqComboDelay, true, function(v)
+    Config.SeqComboDelay = v
+    SaveSettings()
+end)
+
+-- ==========================================
+-- محتوى تبويب الإعدادات (Settings Tab - Mobile Cleaned)
+-- ==========================================
+CreateLabel(SettingsTab, " Mobile Settings:")
+Instance.new("Frame", SettingsTab).Size = UDim2.new(1, 0, 0, 5)
+
+local StatsToggle = Instance.new("TextButton", SettingsTab)
+StatsToggle.Size = UDim2.new(1, -10, 0, 40)
+StatsToggle.BackgroundColor3 = Config.ShowStats and UIColors.MenuColor or UIColors.DarkElement
+StatsToggle.Text = "Toggle FPS/PING UI"
+StatsToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatsToggle.Font = Enum.Font.GothamBold
+StatsToggle.ZIndex = 5
+Instance.new("UICorner", StatsToggle).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", StatsToggle).Color = UIColors.MenuColor
+
+-- Stats Frame (FPS & Ping) - Floating
+local StatsFrame = Instance.new("Frame", ScreenGui)
+StatsFrame.Size = UDim2.new(0, 160, 0, 30)
+StatsFrame.Position = UDim2.new(0.5, -80, 0, 10)
+StatsFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 20)
+StatsFrame.Visible = Config.ShowStats
+Instance.new("UICorner", StatsFrame).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", StatsFrame).Color = UIColors.MenuColor
+MakeDraggable(StatsFrame)
+
+local StatsText = Instance.new("TextLabel", StatsFrame)
+StatsText.Size = UDim2.new(1, 0, 1, 0)
+StatsText.BackgroundTransparency = 1
+StatsText.Text = "FPS: 0 | PING: 0ms"
+StatsText.TextColor3 = Color3.fromRGB(255, 255, 255)
+StatsText.Font = Enum.Font.GothamBold
+StatsText.TextSize = 12
+
+local lastTick = tick()
+RunService.RenderStepped:Connect(function()
+    if not Config.ShowStats then return end
+    local currentTick = tick()
+    local fps = math.floor(1 / (currentTick - lastTick))
+    lastTick = currentTick
+    
+    local ping = 0
+    pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+    StatsText.Text = "FPS: " .. fps .. " | PING: " .. ping .. "ms"
+end)
+
+StatsToggle.MouseButton1Click:Connect(function()
+    Config.ShowStats = not Config.ShowStats
+    StatsFrame.Visible = Config.ShowStats
+    StatsToggle.BackgroundColor3 = Config.ShowStats and UIColors.MenuColor or UIColors.DarkElement
+    SaveSettings()
+end)
+
+RunService.RenderStepped:Connect(function()
+    MainTab.CanvasSize = UDim2.new(0, 0, 0, MainTab.UIListLayout.AbsoluteContentSize.Y + 20)
+    SettingsTab.CanvasSize = UDim2.new(0, 0, 0, SettingsTab.UIListLayout.AbsoluteContentSize.Y + 20)
+end)
+
+print("VI HOEP | MOBILE ABSOLUTE SYSTEM V6.0 LOADED")
