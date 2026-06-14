@@ -1,8 +1,8 @@
 --[[
     ===========================================================================
-    PROJECT     : VI HOEP - COMBAT SUPREMACY (PC & MOBILE EDITION)
+    PROJECT     : VI HOEP - COMBAT SUPREMACY (MOBILE EDITION)
     STYLE       : DYNAMIC NEON
-    FEATURES    : FULLSCREEN LOAD, TABBED UI, THEME SYNC, FLING, BRING, ESP, AURA, MOBILE FLY, UI SCALING
+    FEATURES    : FLOATING TOGGLE ICON, +/- BUTTONS, FLING, BRING, ESP, AURA
     ===========================================================================
 ]]
 
@@ -22,10 +22,9 @@ local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
-local SaveFileName = "VI_HOEP_Config.json"
+local SaveFileName = "VI_HOEP_Mobile_Config.json"
 
 local Config = {
-    ToggleKey = "RightShift",
     UIStrokeStyle = "Purple",
     UIStrokeSpeed = 3,
     UITransparency = 0,
@@ -439,7 +438,7 @@ local function UpdateAbsoluteAnchor()
     
     if Config.AbsoluteAnchorEnabled then
         if myRoot and not AnchorCFrame then 
-            AnchorCFrame = myRoot.CFrame + Vector3.new(0, 30, 0) 
+            AnchorCFrame = myRoot.CFrame
             OriginalCollisions = {}
             for _, part in pairs(myChar:GetDescendants()) do
                 if part:IsA("BasePart") then
@@ -458,28 +457,22 @@ local function UpdateAbsoluteAnchor()
                         local flySpeed = 60
                         local moveDirection = Vector3.new(0, 0, 0)
                         
-                        -- Mobile & PC Movement Logic (Reading Joystick + Camera Direction)
-                        local moveVector = hum.MoveDirection
-                        local camLook = Camera.CFrame.LookVector
-                        local camRight = Camera.CFrame.RightVector
-                        
-                        -- Normalize to ignore Y for dot product calculations
-                        local flatCamLook = Vector3.new(camLook.X, 0, camLook.Z).Unit
-                        if flatCamLook.Magnitude == 0 or tostring(flatCamLook.X) == "-nan(ind)" then flatCamLook = Vector3.new(0, 0, -1) end
-                        local flatCamRight = Vector3.new(camRight.X, 0, camRight.Z).Unit
-                        
-                        if moveVector.Magnitude > 0 then
-                            local forwardInput = moveVector:Dot(flatCamLook)
-                            local rightInput = moveVector:Dot(flatCamRight)
-                            moveDirection = (camLook * forwardInput) + (camRight * rightInput)
-                        end
-                        
-                        -- PC and Mobile Jump/Descend Support
-                        if UserInputService:GetJumpState() or UserInputService:IsKeyDown(Enum.KeyCode.Space) then 
-                            moveDirection = moveDirection + Vector3.new(0, 1, 0) 
-                        end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then 
-                            moveDirection = moveDirection - Vector3.new(0, 1, 0) 
+                        pcall(function()
+                            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - Camera.CFrame.RightVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Camera.CFrame.RightVector end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
+                            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
+                        end)
+
+                        if UserInputService.TouchEnabled then
+                            if hum.MoveDirection.Magnitude > 0 then
+                                moveDirection = moveDirection + hum.MoveDirection
+                            end
+                            if hum.Jump then
+                                moveDirection = moveDirection + Vector3.new(0, 1, 0)
+                            end
                         end
                         
                         if moveDirection.Magnitude > 0 then
@@ -489,7 +482,8 @@ local function UpdateAbsoluteAnchor()
                         root.Velocity = Vector3.new(0, 0, 0)
                         root.RotVelocity = Vector3.new(0, 0, 0)
                         
-                        local flatLook = Vector3.new(camLook.X, 0, camLook.Z).Unit
+                        local lookVector = Camera.CFrame.LookVector
+                        local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z).Unit
                         if flatLook.Magnitude == 0 or tostring(flatLook.X) == "-nan(ind)" then 
                             flatLook = Vector3.new(0, 0, -1) 
                         end
@@ -690,6 +684,61 @@ local ThemedStrokes = {}
 local ThemedPlayerListBtns = {} 
 local ScrollFrames = {}
 
+-- أيقونة السحب (VI Floating Toggle Button)
+local ToggleIcon = Instance.new("TextButton", ScreenGui)
+ToggleIcon.Size = UDim2.new(0, 50, 0, 50)
+ToggleIcon.Position = UDim2.new(0, 20, 0, 20)
+ToggleIcon.BackgroundColor3 = UIColors.Element
+ToggleIcon.Text = "VI"
+ToggleIcon.TextColor3 = CurrentThemeColor
+ToggleIcon.Font = Enum.Font.GothamBold
+ToggleIcon.TextSize = 22
+Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(1, 0)
+
+local ToggleStroke = Instance.new("UIStroke", ToggleIcon)
+ToggleStroke.Thickness = 2.5
+ToggleStroke.Color = CurrentThemeColor
+
+table.insert(ThemedTexts, ToggleIcon)
+table.insert(ThemedStrokes, ToggleStroke)
+
+local isDraggingToggle = false
+local toggleDragStart
+local toggleStartPos
+
+ToggleIcon.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isDraggingToggle = false
+        toggleDragStart = input.Position
+        toggleStartPos = ToggleIcon.Position
+    end
+end)
+
+ToggleIcon.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        if toggleDragStart and (input.Position - toggleDragStart).Magnitude > 5 then
+            isDraggingToggle = true
+            local delta = input.Position - toggleDragStart
+            ToggleIcon.Position = UDim2.new(toggleStartPos.X.Scale, toggleStartPos.X.Offset + delta.X, toggleStartPos.Y.Scale, toggleStartPos.Y.Offset + delta.Y)
+        end
+    end
+end)
+
+ToggleIcon.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if not isDraggingToggle then
+            -- الفتح والاغلاق
+            local MainFrameRef = ScreenGui:FindFirstChild("MainFrame")
+            if MainFrameRef then 
+                MainFrameRef.Visible = not MainFrameRef.Visible 
+                PlaySound(MainFrameRef.Visible)
+            end
+        end
+        toggleDragStart = nil
+    end
+end)
+
+
 local TopStatsFrame = Instance.new("Frame", ScreenGui)
 TopStatsFrame.Size = UDim2.new(0, 160, 0, 22)
 TopStatsFrame.Position = UDim2.new(0.5, -80, 0, 10)
@@ -714,17 +763,14 @@ table.insert(ThemedTexts, StatsLabel)
 table.insert(ThemedStrokes, TopStatsStroke)
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 500, 0, 400)
-MainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 450, 0, 350) -- تصغير الحجم ليناسب الهاتف
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
 MainFrame.BackgroundColor3 = UIColors.Background
 MainFrame.BackgroundTransparency = Config.UITransparency
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
-
--- UI Scaling Feature added for Mobile
-local MainUIScale = Instance.new("UIScale", MainFrame)
-MainUIScale.Scale = 1
 
 local NeonStroke = Instance.new("UIStroke", MainFrame)
 NeonStroke.Thickness = 2.5
@@ -740,7 +786,7 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 8)
 local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "VI HOEP - COMBAT SUPREMACY"
+Title.Text = "VI HOEP - MOBILE SUPREMACY"
 Title.TextColor3 = CurrentThemeColor
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -769,8 +815,9 @@ TabBar.BackgroundColor3 = UIColors.Element; TabBar.BackgroundTransparency = Conf
 local TabContent = Instance.new("Frame", MainFrame)
 TabContent.Size = UDim2.new(1, 0, 1, -70); TabContent.Position = UDim2.new(0, 0, 0, 70); TabContent.BackgroundTransparency = 1
 
+local TabWidth = 450 / 4
 local ActiveTabIndicator = Instance.new("Frame", TabBar)
-ActiveTabIndicator.Size = UDim2.new(0, 125, 0, 2); ActiveTabIndicator.Position = UDim2.new(0, 0, 1, -2)
+ActiveTabIndicator.Size = UDim2.new(0, TabWidth, 0, 2); ActiveTabIndicator.Position = UDim2.new(0, 0, 1, -2)
 ActiveTabIndicator.BackgroundColor3 = CurrentThemeColor; ActiveTabIndicator.BorderSizePixel = 0
 table.insert(ThemedBackgrounds, {Element = ActiveTabIndicator, IsToggle = false})
 
@@ -810,8 +857,8 @@ local SettingsPage, SetLayout = CreatePage()
 
 local function CreateTabBtn(text, posX, targetPage)
     local btn = Instance.new("TextButton", TabBar)
-    btn.Size = UDim2.new(0, 125, 1, 0); btn.Position = UDim2.new(0, posX, 0, 0); btn.BackgroundTransparency = 1
-    btn.Text = text; btn.TextColor3 = UIColors.SubText; btn.Font = Enum.Font.GothamMedium; btn.TextSize = 13
+    btn.Size = UDim2.new(0, TabWidth, 1, 0); btn.Position = UDim2.new(0, posX, 0, 0); btn.BackgroundTransparency = 1
+    btn.Text = text; btn.TextColor3 = UIColors.SubText; btn.Font = Enum.Font.GothamMedium; btn.TextSize = 12
     btn.MouseButton1Click:Connect(function()
         for _, child in pairs(TabBar:GetChildren()) do if child:IsA("TextButton") then child.TextColor3 = UIColors.SubText end end
         btn.TextColor3 = UIColors.Text
@@ -822,10 +869,10 @@ local function CreateTabBtn(text, posX, targetPage)
     return btn
 end
 
-CreateTabBtn("Combat Core", 0, CombatPage).TextColor3 = UIColors.Text
-CreateTabBtn("Fling System", 125, FlingPage)
-CreateTabBtn("ESP & Visuals", 250, ESPPage)
-CreateTabBtn("Settings", 375, SettingsPage)
+CreateTabBtn("Combat", 0, CombatPage).TextColor3 = UIColors.Text
+CreateTabBtn("Fling", TabWidth * 1, FlingPage)
+CreateTabBtn("Visuals", TabWidth * 2, ESPPage)
+CreateTabBtn("Settings", TabWidth * 3, SettingsPage)
 CombatPage.Visible = true
 
 local UIElements = {}
@@ -897,63 +944,79 @@ local function CreateDropdown(parent, text, options, defaultOption, callback)
     end
 end
 
-local function CreateSlider(parent, text, min, max, defaultVal, isFloat, callback)
+-- زر التزويد والإنقاص (+ و -) الجديد والمثالي للهاتف
+local function CreateStepper(parent, text, min, max, step, defaultVal, callback)
     local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, -10, 0, 45); frame.BackgroundColor3 = UIColors.Element; frame.BackgroundTransparency = Config.UITransparency
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6); table.insert(UIElements, frame)
+    frame.Size = UDim2.new(1, -10, 0, 35)
+    frame.BackgroundColor3 = UIColors.Element
+    frame.BackgroundTransparency = Config.UITransparency
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+    table.insert(UIElements, frame)
     
     local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(0.5, 0, 0, 20); lbl.Position = UDim2.new(0, 15, 0, 5); lbl.BackgroundTransparency = 1
-    lbl.Text = text; lbl.TextColor3 = UIColors.Text; lbl.Font = Enum.Font.Gotham; lbl.TextSize = 13; lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Size = UDim2.new(0.5, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 15, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = UIColors.Text
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-    local valText = Instance.new("TextLabel", frame)
-    valText.Size = UDim2.new(0.5, -15, 0, 20); valText.Position = UDim2.new(0.5, 0, 0, 5); valText.BackgroundTransparency = 1
-    valText.Text = tostring(defaultVal); valText.TextColor3 = CurrentThemeColor; valText.Font = Enum.Font.GothamBold; valText.TextSize = 12; valText.TextXAlignment = Enum.TextXAlignment.Right
-    table.insert(ThemedTexts, valText)
+    local controls = Instance.new("Frame", frame)
+    controls.Size = UDim2.new(0.4, 0, 1, 0)
+    controls.Position = UDim2.new(0.6, -10, 0, 0)
+    controls.BackgroundTransparency = 1
 
-    local sliderBG = Instance.new("Frame", frame)
-    sliderBG.Size = UDim2.new(1, -30, 0, 6); sliderBG.Position = UDim2.new(0, 15, 0, 30); sliderBG.BackgroundColor3 = UIColors.Background
-    Instance.new("UICorner", sliderBG).CornerRadius = UDim.new(1, 0)
+    local minusBtn = Instance.new("TextButton", controls)
+    minusBtn.Size = UDim2.new(0, 25, 0, 25)
+    minusBtn.Position = UDim2.new(0, 0, 0.5, -12.5)
+    minusBtn.BackgroundColor3 = UIColors.Background
+    minusBtn.Text = "-"
+    minusBtn.TextColor3 = UIColors.Text
+    minusBtn.Font = Enum.Font.GothamBold
+    minusBtn.TextSize = 16
+    Instance.new("UICorner", minusBtn).CornerRadius = UDim.new(0, 4)
 
-    local sliderFill = Instance.new("Frame", sliderBG)
-    sliderFill.Size = UDim2.new((defaultVal - min) / (max - min), 0, 1, 0); sliderFill.BackgroundColor3 = CurrentThemeColor
-    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1, 0); table.insert(ThemedBackgrounds, {Element = sliderFill, IsToggle = false})
+    local valTxt = Instance.new("TextLabel", controls)
+    valTxt.Size = UDim2.new(1, -60, 1, 0)
+    valTxt.Position = UDim2.new(0, 30, 0, 0)
+    valTxt.BackgroundTransparency = 1
+    valTxt.Text = tostring(defaultVal)
+    valTxt.TextColor3 = CurrentThemeColor
+    valTxt.Font = Enum.Font.GothamBold
+    valTxt.TextSize = 13
+    table.insert(ThemedTexts, valTxt)
 
-    local sliderBtn = Instance.new("TextButton", sliderBG)
-    sliderBtn.Size = UDim2.new(1, 0, 1, 20); sliderBtn.Position = UDim2.new(0, 0, 0.5, -10); sliderBtn.BackgroundTransparency = 1; sliderBtn.Text = ""
+    local plusBtn = Instance.new("TextButton", controls)
+    plusBtn.Size = UDim2.new(0, 25, 0, 25)
+    plusBtn.Position = UDim2.new(1, -25, 0.5, -12.5)
+    plusBtn.BackgroundColor3 = UIColors.Background
+    plusBtn.Text = "+"
+    plusBtn.TextColor3 = UIColors.Text
+    plusBtn.Font = Enum.Font.GothamBold
+    plusBtn.TextSize = 16
+    Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0, 4)
 
-    local sliding = false
-    sliderBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = true end end)
-    UserInputService.InputEnded:Connect(function(input) if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and sliding then sliding = false; SaveSettings() end end)
-    UserInputService.InputChanged:Connect(function(input)
-        if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local inputPos = input.Position.X
-            if input.UserInputType == Enum.UserInputType.Touch then inputPos = input.Position.X end
-            local perc = math.clamp((inputPos - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
-            sliderFill.Size = UDim2.new(perc, 0, 1, 0)
-            local val = min + ((max - min) * perc)
-            if not isFloat then val = math.floor(val) else val = math.floor(val * 100) / 100 end
-            valText.Text = tostring(val); callback(val)
-        end
+    local currentVal = defaultVal
+
+    minusBtn.MouseButton1Click:Connect(function()
+        currentVal = math.clamp(currentVal - step, min, max)
+        if step < 1 then currentVal = math.floor(currentVal * 100 + 0.5) / 100 end
+        valTxt.Text = tostring(currentVal)
+        callback(currentVal)
+        SaveSettings()
+        PlaySound(true)
     end)
-end
 
-local function CreateTextBox(parent, text, defaultVal, callback)
-    local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, -10, 0, 35); frame.BackgroundColor3 = UIColors.Element; frame.BackgroundTransparency = Config.UITransparency
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6); table.insert(UIElements, frame)
-    
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(0.6, 0, 1, 0); lbl.Position = UDim2.new(0, 15, 0, 0); lbl.BackgroundTransparency = 1
-    lbl.Text = text; lbl.TextColor3 = UIColors.Text; lbl.Font = Enum.Font.Gotham; lbl.TextSize = 13; lbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local input = Instance.new("TextBox", frame)
-    input.Size = UDim2.new(0.3, 0, 0, 25); input.Position = UDim2.new(0.7, -15, 0, 5)
-    input.BackgroundColor3 = UIColors.Background; input.Text = tostring(defaultVal); input.TextColor3 = CurrentThemeColor
-    input.Font = Enum.Font.GothamBold; input.TextSize = 12; Instance.new("UICorner", input).CornerRadius = UDim.new(0, 4)
-    table.insert(ThemedTexts, input)
-
-    input.FocusLost:Connect(function() callback(input.Text, input); SaveSettings() end)
+    plusBtn.MouseButton1Click:Connect(function()
+        currentVal = math.clamp(currentVal + step, min, max)
+        if step < 1 then currentVal = math.floor(currentVal * 100 + 0.5) / 100 end
+        valTxt.Text = tostring(currentVal)
+        callback(currentVal)
+        SaveSettings()
+        PlaySound(true)
+    end)
 end
 
 local function CreateButton(parent, text, bgColor, callback)
@@ -1053,10 +1116,11 @@ local function UpdateUITransparency(val)
     for _, el in ipairs(UIElements) do if el then el.BackgroundTransparency = val end end
 end
 
+-- تم استبدال أشرطة السحب (Sliders) بأزرار (Stepper) لسهولة الاستخدام بالهاتف
 CreateDropdown(CombatPage, "Bring Target Mode", {"ALL", "CLOSEST", "SELECTED LIST"}, Config.TargetPlayer, function(val) Config.TargetPlayer = val end)
 CreatePlayerList(CombatPage, "Select Multi-Bring Targets", Config.BringTargets)
 CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(val) Config.SpamBringEnabled = val; UpdateSpamBring() end)
-CreateSlider(CombatPage, "Bring Distance", -10, 10, Config.BringDistance, true, function(val) Config.BringDistance = val end)
+CreateStepper(CombatPage, "Bring Distance", -10, 10, 0.5, Config.BringDistance, function(val) Config.BringDistance = val end)
 CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(val) Config.AbsoluteAnchorEnabled = val; UpdateAbsoluteAnchor() end)
 
 CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
@@ -1067,58 +1131,9 @@ CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(val) Config.
 CreateToggle(ESPPage, "Enable Skeleton ESP", Config.ShowSkeleton, function(val) Config.ShowSkeleton = val end)
 CreateToggle(ESPPage, "Enable Hand Aura", Config.ShowAura, function(val) Config.ShowAura = val; UpdateAuraState() end)
 
-CreateTextBox(SettingsPage, "Menu Toggle Key", Config.ToggleKey, function(val) Config.ToggleKey = val end)
 CreateToggle(SettingsPage, "Show Watermark & FPS", Config.ShowWatermark, function(val) Config.ShowWatermark = val; TopStatsFrame.Visible = val end)
-CreateSlider(SettingsPage, "UI Background Transparency", 0, 1, Config.UITransparency, true, function(val) Config.UITransparency = val; UpdateUITransparency(val) end)
+CreateStepper(SettingsPage, "UI Background Transparency", 0, 1, 0.1, Config.UITransparency, function(val) Config.UITransparency = val; UpdateUITransparency(val) end)
 CreateDropdown(SettingsPage, "UI Stroke Color Preset", {"Rainbow", "Purple", "White", "Black", "Red", "Blue", "Green"}, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
-
--- UI Scale Controls Section
-local ScaleFrame = Instance.new("Frame", SettingsPage)
-ScaleFrame.Size = UDim2.new(1, -10, 0, 35)
-ScaleFrame.BackgroundColor3 = UIColors.Element
-ScaleFrame.BackgroundTransparency = Config.UITransparency
-Instance.new("UICorner", ScaleFrame).CornerRadius = UDim.new(0, 6)
-table.insert(UIElements, ScaleFrame)
-
-local ScaleLbl = Instance.new("TextLabel", ScaleFrame)
-ScaleLbl.Size = UDim2.new(0.5, 0, 1, 0)
-ScaleLbl.Position = UDim2.new(0, 15, 0, 0)
-ScaleLbl.BackgroundTransparency = 1
-ScaleLbl.Text = "UI Scale (Size)"
-ScaleLbl.TextColor3 = UIColors.Text
-ScaleLbl.Font = Enum.Font.Gotham
-ScaleLbl.TextSize = 13
-ScaleLbl.TextXAlignment = Enum.TextXAlignment.Left
-
-local BtnPlus = Instance.new("TextButton", ScaleFrame)
-BtnPlus.Size = UDim2.new(0, 30, 0, 25)
-BtnPlus.Position = UDim2.new(1, -40, 0, 5)
-BtnPlus.BackgroundColor3 = UIColors.Background
-BtnPlus.Text = "+"
-BtnPlus.TextColor3 = CurrentThemeColor
-BtnPlus.Font = Enum.Font.GothamBold
-BtnPlus.TextSize = 14
-Instance.new("UICorner", BtnPlus).CornerRadius = UDim.new(0, 4)
-
-local BtnMinus = Instance.new("TextButton", ScaleFrame)
-BtnMinus.Size = UDim2.new(0, 30, 0, 25)
-BtnMinus.Position = UDim2.new(1, -75, 0, 5)
-BtnMinus.BackgroundColor3 = UIColors.Background
-BtnMinus.Text = "-"
-BtnMinus.TextColor3 = CurrentThemeColor
-BtnMinus.Font = Enum.Font.GothamBold
-BtnMinus.TextSize = 14
-Instance.new("UICorner", BtnMinus).CornerRadius = UDim.new(0, 4)
-table.insert(ThemedTexts, BtnPlus); table.insert(ThemedTexts, BtnMinus)
-
-BtnPlus.MouseButton1Click:Connect(function()
-    MainUIScale.Scale = math.clamp(MainUIScale.Scale + 0.1, 0.5, 1.5)
-    PlaySound(true)
-end)
-BtnMinus.MouseButton1Click:Connect(function()
-    MainUIScale.Scale = math.clamp(MainUIScale.Scale - 0.1, 0.5, 1.5)
-    PlaySound(false)
-end)
 
 CreateButton(SettingsPage, "REJOIN SERVER", Color3.fromRGB(40, 40, 50), function()
     if #Players:GetPlayers() <= 1 then TeleportService:Teleport(game.PlaceId, LocalPlayer)
@@ -1178,55 +1193,4 @@ RunService.RenderStepped:Connect(function()
     FlingPage.CanvasSize = UDim2.new(0, 0, 0, FlingLayout.AbsoluteContentSize.Y + 20)
     ESPPage.CanvasSize = UDim2.new(0, 0, 0, ESPLayout.AbsoluteContentSize.Y + 20)
     SettingsPage.CanvasSize = UDim2.new(0, 0, 0, SetLayout.AbsoluteContentSize.Y + 20)
-end)
-
--- Mobile Toggle Button (Draggable & Syncs with Theme)
-local MobileToggleBtn = Instance.new("TextButton", ScreenGui)
-MobileToggleBtn.Size = UDim2.new(0, 50, 0, 50)
-MobileToggleBtn.Position = UDim2.new(0, 20, 0.5, -25) 
-MobileToggleBtn.BackgroundColor3 = UIColors.Background
-MobileToggleBtn.Text = "VI"
-MobileToggleBtn.TextColor3 = CurrentThemeColor
-MobileToggleBtn.Font = Enum.Font.GothamBlack
-MobileToggleBtn.TextSize = 20
-MobileToggleBtn.AutoButtonColor = false
-
-local ToggleCorner = Instance.new("UICorner", MobileToggleBtn)
-ToggleCorner.CornerRadius = UDim.new(1, 0)
-
-local ToggleStroke = Instance.new("UIStroke", MobileToggleBtn)
-ToggleStroke.Thickness = 2.5
-ToggleStroke.Color = CurrentThemeColor
-
-table.insert(ThemedTexts, MobileToggleBtn)
-table.insert(ThemedStrokes, ToggleStroke)
-
-MobileToggleBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
-    PlaySound(MainFrame.Visible)
-end)
-
-local toggleDragging, toggleDragInput, toggleDragStart, toggleStartPos
-MobileToggleBtn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        toggleDragging = true; toggleDragStart = input.Position; toggleStartPos = MobileToggleBtn.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then toggleDragging = false end end)
-    end
-end)
-MobileToggleBtn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then toggleDragInput = input end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == toggleDragInput and toggleDragging then
-        local delta = input.Position - toggleDragStart
-        MobileToggleBtn.Position = UDim2.new(toggleStartPos.X.Scale, toggleStartPos.X.Offset + delta.X, toggleStartPos.Y.Scale, toggleStartPos.Y.Offset + delta.Y)
-    end
-end)
-
--- Keyboard Input (PC Support kept intact)
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode.Name == Config.ToggleKey then
-        MainFrame.Visible = not MainFrame.Visible; PlaySound(MainFrame.Visible)
-    end
 end)
