@@ -1,8 +1,8 @@
 --[[
     ===========================================================================
-    PROJECT     : VI HOEP - COMBAT SUPREMACY (MOBILE EDITION)
-    STYLE       : DYNAMIC NEON
-    FEATURES    : FLOATING TOGGLE ICON, +/- BUTTONS, FLING, BRING, ESP, AURA
+    PROJECT     : VI HOEP - COMBAT SUPREMACY + VNZO CINEMATIC LOADING (MOBILE EDITION)
+    STYLE       : DYNAMIC NEON / COSMIC / GLASSMORPHISM
+    FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, GRAPHICS, MOBILE TOGGLE
     ===========================================================================
 ]]
 
@@ -17,17 +17,20 @@ local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 local SoundService = game:GetService("SoundService")
 local TeleportService = game:GetService("TeleportService")
+local StarterGui = game:GetService("StarterGui")
+local Lighting = game:GetService("Lighting")
 
 local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
-local SaveFileName = "VI_HOEP_Mobile_Config.json"
+local SaveFileName = "VI_HOEP_Config.json"
 
 local Config = {
     UIStrokeStyle = "Purple",
     UIStrokeSpeed = 3,
     UITransparency = 0,
+    MenuScale = 1.0, -- خيار التحكم بحجم القائمة كلياً
     ShowWatermark = true,
     TargetPlayer = "SELECTED LIST", 
     FlingTargets = {}, 
@@ -86,74 +89,192 @@ local UIColors = {
     SubText = Color3.fromRGB(150, 150, 150)
 }
 
+-- ===========================================================================
+-- [[ بداية شاشة تحميل VNZO السينمائية الفخمة ]]
+-- ===========================================================================
+do
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    
+    local LoadingScreenGui = Instance.new("ScreenGui")
+    LoadingScreenGui.Name = "VNZO_Cosmic_Loading"
+    LoadingScreenGui.IgnoreGuiInset = true
+    LoadingScreenGui.ResetOnSpawn = false
+    LoadingScreenGui.DisplayOrder = 999999
+    LoadingScreenGui.Parent = (RunService:IsStudio() and PlayerGui) or CoreGui
+
+    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, false) end)
+
+    local hiddenGuis = {}
+    for _, gui in ipairs(PlayerGui:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui ~= LoadingScreenGui and gui.Enabled then
+            table.insert(hiddenGuis, gui)
+            gui.Enabled = false
+        end
+    end
+
+    local BackgroundFrame = Instance.new("Frame")
+    BackgroundFrame.Size = UDim2.new(1, 0, 1, 0)
+    BackgroundFrame.BorderSizePixel = 0
+    BackgroundFrame.Parent = LoadingScreenGui
+
+    local SpaceGradient = Instance.new("UIGradient")
+    SpaceGradient.Rotation = 45
+    SpaceGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 5, 22)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(28, 12, 54)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(5, 3, 10))
+    })
+    SpaceGradient.Parent = BackgroundFrame
+
+    local ParticleContainer = Instance.new("Frame")
+    ParticleContainer.Size = UDim2.new(1, 0, 1, 0)
+    ParticleContainer.BackgroundTransparency = 1
+    ParticleContainer.Parent = BackgroundFrame
+
+    local BarBackground = Instance.new("Frame")
+    BarBackground.Size = UDim2.new(0, 600, 0, 24)
+    BarBackground.Position = UDim2.new(0.5, -300, 0.72, 0)
+    BarBackground.BackgroundColor3 = Color3.fromRGB(15, 12, 28)
+    BarBackground.BackgroundTransparency = 0.4
+    BarBackground.BorderSizePixel = 0
+    BarBackground.Parent = BackgroundFrame
+    Instance.new("UICorner", BarBackground).CornerRadius = UDim.new(0, 12)
+
+    local BarProgress = Instance.new("Frame")
+    BarProgress.Size = UDim2.new(0, 0, 1, 0)
+    BarProgress.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    BarProgress.BorderSizePixel = 0
+    BarProgress.Parent = BarBackground
+    Instance.new("UICorner", BarProgress).CornerRadius = UDim.new(0, 12)
+
+    local UIGradientProg = Instance.new("UIGradient")
+    UIGradientProg.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 140, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(150, 0, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 220))
+    })
+    UIGradientProg.Parent = BarProgress
+
+    local VNZOTag = Instance.new("TextLabel")
+    VNZOTag.Size = UDim2.new(0, 150, 0, 25)
+    VNZOTag.Position = UDim2.new(1, -150, 1, 6)
+    VNZOTag.BackgroundTransparency = 1
+    VNZOTag.Text = "VNZO"
+    VNZOTag.TextColor3 = Color3.fromRGB(255, 255, 255)
+    VNZOTag.Font = Enum.Font.GothamBold
+    VNZOTag.TextSize = 14
+    VNZOTag.TextXAlignment = Enum.TextXAlignment.Right
+    VNZOTag.Parent = BarBackground
+
+    local LoadingUIStroke = Instance.new("UIStroke")
+    LoadingUIStroke.Color = Color3.fromRGB(255, 255, 255)
+    LoadingUIStroke.Transparency = 0.3
+    LoadingUIStroke.Thickness = 2
+    LoadingUIStroke.Parent = VNZOTag
+
+    local isSpawning = true
+    local particleTypes = {
+        {Text = "✦", Size = 12, Color = Color3.fromRGB(230, 240, 255), Trans = 0.3},
+        {Text = "✨", Size = 14, Color = Color3.fromRGB(255, 255, 255), Trans = 0.2},
+        {Text = "VI", Size = 11, Color = Color3.fromRGB(190, 150, 255), Trans = 0.4}
+    }
+
+    task.spawn(function()
+        while isSpawning do
+            task.wait(0.08)
+            if not isSpawning then break end
+            
+            local randomType = particleTypes[math.random(1, #particleTypes)]
+            local Particle = Instance.new("TextLabel")
+            Particle.BackgroundTransparency = 1
+            Particle.Text = randomType.Text
+            Particle.TextSize = randomType.Size + math.random(-2, 3)
+            Particle.TextColor3 = randomType.Color
+            Particle.TextTransparency = randomType.Trans
+            Particle.Font = Enum.Font.GothamBold
+            Particle.Position = UDim2.new(math.random(), 0, -0.05, 0)
+            Particle.Rotation = math.random(0, 360)
+            Particle.Parent = ParticleContainer
+            
+            local fallDuration = math.random(18, 35) / 10
+            local endXOffset = math.random(-50, 50) / 1000
+            
+            local fallTweenInfo = TweenInfo.new(fallDuration, Enum.EasingStyle.Linear, Enum.EasingDirection.In)
+            local fallTween = TweenService:Create(Particle, fallTweenInfo, {
+                Position = UDim2.new(Particle.Position.X.Scale + endXOffset, 0, 1.05, 0),
+                Rotation = Particle.Rotation + math.random(-90, 90),
+                TextTransparency = 1
+            })
+            fallTween:Play()
+            fallTween.Completed:Connect(function() Particle:Destroy() end)
+        end
+    end)
+
+    local gradientOffset = 0
+    local gradientConnection
+    gradientConnection = RunService.RenderStepped:Connect(function(deltaTime)
+        if UIGradientProg and UIGradientProg.Parent then
+            gradientOffset = gradientOffset + (deltaTime * 0.75)
+            if gradientOffset > 1 then gradientOffset = -1 end
+            UIGradientProg.Offset = Vector2.new(gradientOffset, 0)
+        else
+            gradientConnection:Disconnect()
+        end
+    end)
+
+    local glowActive = true
+    task.spawn(function()
+        while glowActive and task.wait() do
+            if not LoadingUIStroke or not LoadingUIStroke.Parent then break end
+            TweenService:Create(LoadingUIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.6}):Play()
+            task.wait(0.5)
+            if not LoadingUIStroke or not LoadingUIStroke.Parent then break end
+            TweenService:Create(LoadingUIStroke, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.1}):Play()
+            task.wait(0.5)
+        end
+    end)
+
+    local loadingTweenInfo = TweenInfo.new(2.0, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out)
+    local loadingTween = TweenService:Create(BarProgress, loadingTweenInfo, {Size = UDim2.new(1, 0, 1, 0)})
+    loadingTween:Play()
+
+    loadingTween.Completed:Wait()
+    task.wait(0.15)
+    isSpawning = false
+    glowActive = false
+    
+    local outroTweenInfo = TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+    for _, item in ipairs(ParticleContainer:GetChildren()) do
+        if item:IsA("TextLabel") then
+            TweenService:Create(item, outroTweenInfo, {TextTransparency = 1}):Play()
+        end
+    end
+    
+    TweenService:Create(BackgroundFrame, outroTweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(BarBackground, outroTweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(BarProgress, outroTweenInfo, {BackgroundTransparency = 1}):Play()
+    TweenService:Create(VNZOTag, outroTweenInfo, {TextTransparency = 1}):Play()
+    TweenService:Create(LoadingUIStroke, outroTweenInfo, {Transparency = 1}):Play()
+    
+    task.wait(0.6)
+    
+    pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
+    for _, gui in ipairs(hiddenGuis) do
+        if gui and gui.Parent then gui.Enabled = true end
+    end
+    
+    if gradientConnection then gradientConnection:Disconnect() end
+    LoadingScreenGui:Destroy()
+end
+-- ===========================================================================
+-- [[ بداية السكربت والواجهة الأساسية ]]
+-- ===========================================================================
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "VI_HOEP_GUI"
 ScreenGui.Parent = (RunService:IsStudio() and LocalPlayer.PlayerGui) or CoreGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
-
-local LoadFrame = Instance.new("Frame", ScreenGui)
-LoadFrame.Size = UDim2.new(1, 0, 1, 0)
-LoadFrame.BackgroundColor3 = Color3.fromRGB(5, 5, 8)
-LoadFrame.BackgroundTransparency = 0
-LoadFrame.BorderSizePixel = 0
-
-local LoadText = Instance.new("TextLabel", LoadFrame)
-LoadText.Size = UDim2.new(0, 400, 0, 50)
-LoadText.Position = UDim2.new(0.5, -200, 0.5, -25)
-LoadText.BackgroundTransparency = 1
-LoadText.Text = "VI HOEP SUPREMACY"
-LoadText.TextColor3 = CurrentThemeColor
-LoadText.Font = Enum.Font.GothamBlack
-LoadText.TextSize = 32
-LoadText.TextTransparency = 1
-
-local TopLine = Instance.new("Frame", LoadFrame)
-TopLine.Size = UDim2.new(0, 0, 0, 3)
-TopLine.Position = UDim2.new(0, 0, 0, 0)
-TopLine.BackgroundColor3 = CurrentThemeColor
-TopLine.BorderSizePixel = 0
-
-local RightLine = Instance.new("Frame", LoadFrame)
-RightLine.Size = UDim2.new(0, 3, 0, 0)
-RightLine.Position = UDim2.new(1, -3, 0, 0)
-RightLine.BackgroundColor3 = CurrentThemeColor
-RightLine.BorderSizePixel = 0
-
-local BottomLine = Instance.new("Frame", LoadFrame)
-BottomLine.Size = UDim2.new(0, 0, 0, 3)
-BottomLine.Position = UDim2.new(1, 0, 1, 0)
-BottomLine.AnchorPoint = Vector2.new(1, 1)
-BottomLine.BackgroundColor3 = CurrentThemeColor
-BottomLine.BorderSizePixel = 0
-
-local LeftLine = Instance.new("Frame", LoadFrame)
-LeftLine.Size = UDim2.new(0, 3, 0, 0)
-LeftLine.Position = UDim2.new(0, 0, 1, 0)
-LeftLine.AnchorPoint = Vector2.new(0, 1)
-LeftLine.BackgroundColor3 = CurrentThemeColor
-LeftLine.BorderSizePixel = 0
-
-TweenService:Create(LoadText, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
-local t1 = TweenService:Create(TopLine, TweenInfo.new(0.375, Enum.EasingStyle.Linear), {Size = UDim2.new(1, 0, 0, 3)})
-local t2 = TweenService:Create(RightLine, TweenInfo.new(0.375, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 3, 1, 0)})
-local t3 = TweenService:Create(BottomLine, TweenInfo.new(0.375, Enum.EasingStyle.Linear), {Size = UDim2.new(1, 0, 0, 3)})
-local t4 = TweenService:Create(LeftLine, TweenInfo.new(0.375, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 3, 1, 0)})
-
-t1:Play() t1.Completed:Wait()
-t2:Play() t2.Completed:Wait()
-t3:Play() t3.Completed:Wait()
-t4:Play() t4.Completed:Wait()
-
-TweenService:Create(LoadText, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-local fadeOut = TweenService:Create(LoadFrame, TweenInfo.new(0.5), {BackgroundTransparency = 1})
-TweenService:Create(TopLine, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-TweenService:Create(RightLine, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-TweenService:Create(BottomLine, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-TweenService:Create(LeftLine, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-fadeOut:Play()
-fadeOut.Completed:Wait()
-LoadFrame:Destroy()
 
 local function PlaySound(isOn)
     local sound = Instance.new("Sound")
@@ -438,7 +559,7 @@ local function UpdateAbsoluteAnchor()
     
     if Config.AbsoluteAnchorEnabled then
         if myRoot and not AnchorCFrame then 
-            AnchorCFrame = myRoot.CFrame
+            AnchorCFrame = myRoot.CFrame + Vector3.new(0, 30, 0) 
             OriginalCollisions = {}
             for _, part in pairs(myChar:GetDescendants()) do
                 if part:IsA("BasePart") then
@@ -457,23 +578,12 @@ local function UpdateAbsoluteAnchor()
                         local flySpeed = 60
                         local moveDirection = Vector3.new(0, 0, 0)
                         
-                        pcall(function()
-                            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
-                            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
-                            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - Camera.CFrame.RightVector end
-                            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Camera.CFrame.RightVector end
-                            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
-                            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
-                        end)
-
-                        if UserInputService.TouchEnabled then
-                            if hum.MoveDirection.Magnitude > 0 then
-                                moveDirection = moveDirection + hum.MoveDirection
-                            end
-                            if hum.Jump then
-                                moveDirection = moveDirection + Vector3.new(0, 1, 0)
-                            end
-                        end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - Camera.CFrame.RightVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Camera.CFrame.RightVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
                         
                         if moveDirection.Magnitude > 0 then
                             AnchorCFrame = AnchorCFrame + (moveDirection.Unit * flySpeed * deltaTime)
@@ -683,61 +793,7 @@ local ThemedBackgrounds = {}
 local ThemedStrokes = {}
 local ThemedPlayerListBtns = {} 
 local ScrollFrames = {}
-
--- أيقونة السحب (VI Floating Toggle Button)
-local ToggleIcon = Instance.new("TextButton", ScreenGui)
-ToggleIcon.Size = UDim2.new(0, 50, 0, 50)
-ToggleIcon.Position = UDim2.new(0, 20, 0, 20)
-ToggleIcon.BackgroundColor3 = UIColors.Element
-ToggleIcon.Text = "VI"
-ToggleIcon.TextColor3 = CurrentThemeColor
-ToggleIcon.Font = Enum.Font.GothamBold
-ToggleIcon.TextSize = 22
-Instance.new("UICorner", ToggleIcon).CornerRadius = UDim.new(1, 0)
-
-local ToggleStroke = Instance.new("UIStroke", ToggleIcon)
-ToggleStroke.Thickness = 2.5
-ToggleStroke.Color = CurrentThemeColor
-
-table.insert(ThemedTexts, ToggleIcon)
-table.insert(ThemedStrokes, ToggleStroke)
-
-local isDraggingToggle = false
-local toggleDragStart
-local toggleStartPos
-
-ToggleIcon.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDraggingToggle = false
-        toggleDragStart = input.Position
-        toggleStartPos = ToggleIcon.Position
-    end
-end)
-
-ToggleIcon.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        if toggleDragStart and (input.Position - toggleDragStart).Magnitude > 5 then
-            isDraggingToggle = true
-            local delta = input.Position - toggleDragStart
-            ToggleIcon.Position = UDim2.new(toggleStartPos.X.Scale, toggleStartPos.X.Offset + delta.X, toggleStartPos.Y.Scale, toggleStartPos.Y.Offset + delta.Y)
-        end
-    end
-end)
-
-ToggleIcon.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if not isDraggingToggle then
-            -- الفتح والاغلاق
-            local MainFrameRef = ScreenGui:FindFirstChild("MainFrame")
-            if MainFrameRef then 
-                MainFrameRef.Visible = not MainFrameRef.Visible 
-                PlaySound(MainFrameRef.Visible)
-            end
-        end
-        toggleDragStart = nil
-    end
-end)
-
+local TabButtonsList = {}
 
 local TopStatsFrame = Instance.new("Frame", ScreenGui)
 TopStatsFrame.Size = UDim2.new(0, 160, 0, 22)
@@ -763,14 +819,17 @@ table.insert(ThemedTexts, StatsLabel)
 table.insert(ThemedStrokes, TopStatsStroke)
 
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 450, 0, 350) -- تصغير الحجم ليناسب الهاتف
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 500, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
 MainFrame.BackgroundColor3 = UIColors.Background
 MainFrame.BackgroundTransparency = Config.UITransparency
 MainFrame.BorderSizePixel = 0
 MainFrame.Visible = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+
+-- إضافة متحكم حجم الواجهة
+local MainScale = Instance.new("UIScale", MainFrame)
+MainScale.Scale = Config.MenuScale
 
 local NeonStroke = Instance.new("UIStroke", MainFrame)
 NeonStroke.Thickness = 2.5
@@ -786,7 +845,7 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 8)
 local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "VI HOEP - MOBILE SUPREMACY"
+Title.Text = "VI HOEP - COMBAT SUPREMACY"
 Title.TextColor3 = CurrentThemeColor
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
@@ -808,18 +867,72 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+-- ===========================================================================
+-- [[ زر الهاتف المحمول القابل للسحب (VI Icon) ]]
+-- ===========================================================================
+
+local MobileToggleBtn = Instance.new("TextButton", ScreenGui)
+MobileToggleBtn.Size = UDim2.new(0, 45, 0, 45)
+MobileToggleBtn.Position = UDim2.new(0, 20, 0.5, -22)
+MobileToggleBtn.BackgroundColor3 = UIColors.Element
+MobileToggleBtn.Text = "VI"
+MobileToggleBtn.TextColor3 = CurrentThemeColor
+MobileToggleBtn.Font = Enum.Font.GothamBold
+MobileToggleBtn.TextSize = 20
+Instance.new("UICorner", MobileToggleBtn).CornerRadius = UDim.new(1, 0)
+
+local MobileStroke = Instance.new("UIStroke", MobileToggleBtn)
+MobileStroke.Color = CurrentThemeColor
+MobileStroke.Thickness = 2.5
+table.insert(ThemedStrokes, MobileStroke)
+table.insert(ThemedTexts, MobileToggleBtn)
+
+local mDragging, mDragStart, mStartPos
+MobileToggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        mDragging = true
+        mDragStart = input.Position
+        mStartPos = MobileToggleBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then mDragging = false end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if mDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - mDragStart
+        MobileToggleBtn.Position = UDim2.new(mStartPos.X.Scale, mStartPos.X.Offset + delta.X, mStartPos.Y.Scale, mStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+MobileToggleBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+    PlaySound(MainFrame.Visible)
+end)
+
+-- ===========================================================================
+-- [[ بناء نظام التبويبات الجديد (القائمة الأفقية التفاعلية) ]]
+-- ===========================================================================
+
 local TabBar = Instance.new("Frame", MainFrame)
-TabBar.Size = UDim2.new(1, 0, 0, 35); TabBar.Position = UDim2.new(0, 0, 0, 35)
-TabBar.BackgroundColor3 = UIColors.Element; TabBar.BackgroundTransparency = Config.UITransparency; TabBar.BorderSizePixel = 0
+TabBar.Size = UDim2.new(1, 0, 0, 35)
+TabBar.Position = UDim2.new(0, 0, 0, 35)
+TabBar.BackgroundColor3 = UIColors.Element
+TabBar.BackgroundTransparency = Config.UITransparency
+TabBar.BorderSizePixel = 0
+
+local TabListLayout = Instance.new("UIListLayout", TabBar)
+TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 6)
+
+local TabPadding = Instance.new("UIPadding", TabBar)
+TabPadding.PaddingTop = UDim.new(0, 3)
 
 local TabContent = Instance.new("Frame", MainFrame)
 TabContent.Size = UDim2.new(1, 0, 1, -70); TabContent.Position = UDim2.new(0, 0, 0, 70); TabContent.BackgroundTransparency = 1
-
-local TabWidth = 450 / 4
-local ActiveTabIndicator = Instance.new("Frame", TabBar)
-ActiveTabIndicator.Size = UDim2.new(0, TabWidth, 0, 2); ActiveTabIndicator.Position = UDim2.new(0, 0, 1, -2)
-ActiveTabIndicator.BackgroundColor3 = CurrentThemeColor; ActiveTabIndicator.BorderSizePixel = 0
-table.insert(ThemedBackgrounds, {Element = ActiveTabIndicator, IsToggle = false})
 
 local IsRainbow = false
 local function UpdateThemeColor(newColorName)
@@ -837,6 +950,10 @@ local function UpdateThemeColor(newColorName)
         for _, bg in pairs(ThemedBackgrounds) do
             if bg.IsToggle then if bg.GetState() then bg.Element.BackgroundColor3 = CurrentThemeColor end else bg.Element.BackgroundColor3 = CurrentThemeColor end
         end
+        -- تحديث التبويب المضاء
+        for _, tb in pairs(TabButtonsList) do
+            if tb.IsActive then tb.Btn.BackgroundColor3 = CurrentThemeColor end
+        end
     end
 end
 
@@ -853,26 +970,58 @@ end
 local CombatPage, CombatLayout = CreatePage()
 local FlingPage, FlingLayout = CreatePage()
 local ESPPage, ESPLayout = CreatePage()
+local GraphicPage, GraphicLayout = CreatePage()
 local SettingsPage, SetLayout = CreatePage()
 
-local function CreateTabBtn(text, posX, targetPage)
+local function CreateTabBtn(text, targetPage, isDefault)
     local btn = Instance.new("TextButton", TabBar)
-    btn.Size = UDim2.new(0, TabWidth, 1, 0); btn.Position = UDim2.new(0, posX, 0, 0); btn.BackgroundTransparency = 1
-    btn.Text = text; btn.TextColor3 = UIColors.SubText; btn.Font = Enum.Font.GothamMedium; btn.TextSize = 12
+    btn.Size = UDim2.new(0, 92, 1, -6) 
+    btn.BackgroundColor3 = isDefault and CurrentThemeColor or UIColors.Element
+    btn.BackgroundTransparency = isDefault and 0.2 or 1
+    btn.Text = text
+    btn.TextColor3 = isDefault and Color3.fromRGB(255, 255, 255) or UIColors.SubText
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 12
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    local tabData = {Btn = btn, Page = targetPage, IsActive = isDefault}
+    table.insert(TabButtonsList, tabData)
+
+    btn.MouseEnter:Connect(function()
+        if not tabData.IsActive then
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0.7, TextColor3 = Color3.fromRGB(200, 200, 200)}):Play()
+        end
+    end)
+
+    btn.MouseLeave:Connect(function()
+        if not tabData.IsActive then
+            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 1, TextColor3 = UIColors.SubText}):Play()
+        end
+    end)
+
     btn.MouseButton1Click:Connect(function()
-        for _, child in pairs(TabBar:GetChildren()) do if child:IsA("TextButton") then child.TextColor3 = UIColors.SubText end end
-        btn.TextColor3 = UIColors.Text
-        CombatPage.Visible = false; FlingPage.Visible = false; ESPPage.Visible = false; SettingsPage.Visible = false; targetPage.Visible = true
-        TweenService:Create(ActiveTabIndicator, TweenInfo.new(0.2), {Position = UDim2.new(0, posX, 1, -2)}):Play()
+        if tabData.IsActive then return end
+        
+        for _, tb in ipairs(TabButtonsList) do
+            tb.IsActive = false
+            tb.Page.Visible = false
+            TweenService:Create(tb.Btn, TweenInfo.new(0.2), {BackgroundTransparency = 1, TextColor3 = UIColors.SubText, BackgroundColor3 = UIColors.Element}):Play()
+        end
+        
+        tabData.IsActive = true
+        targetPage.Visible = true
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0.2, TextColor3 = Color3.fromRGB(255, 255, 255), BackgroundColor3 = CurrentThemeColor}):Play()
         PlaySound(true)
     end)
     return btn
 end
 
-CreateTabBtn("Combat", 0, CombatPage).TextColor3 = UIColors.Text
-CreateTabBtn("Fling", TabWidth * 1, FlingPage)
-CreateTabBtn("Visuals", TabWidth * 2, ESPPage)
-CreateTabBtn("Settings", TabWidth * 3, SettingsPage)
+CreateTabBtn("Combat", CombatPage, true)
+CreateTabBtn("Fling", FlingPage, false)
+CreateTabBtn("ESP", ESPPage, false)
+CreateTabBtn("Graphic", GraphicPage, false)
+CreateTabBtn("Settings", SettingsPage, false)
+
 CombatPage.Visible = true
 
 local UIElements = {}
@@ -944,8 +1093,51 @@ local function CreateDropdown(parent, text, options, defaultOption, callback)
     end
 end
 
--- زر التزويد والإنقاص (+ و -) الجديد والمثالي للهاتف
-local function CreateStepper(parent, text, min, max, step, defaultVal, callback)
+local function CreateSlider(parent, text, min, max, defaultVal, isFloat, callback)
+    local frame = Instance.new("Frame", parent)
+    frame.Size = UDim2.new(1, -10, 0, 45); frame.BackgroundColor3 = UIColors.Element; frame.BackgroundTransparency = Config.UITransparency
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6); table.insert(UIElements, frame)
+    
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(0.5, 0, 0, 20); lbl.Position = UDim2.new(0, 15, 0, 5); lbl.BackgroundTransparency = 1
+    lbl.Text = text; lbl.TextColor3 = UIColors.Text; lbl.Font = Enum.Font.Gotham; lbl.TextSize = 13; lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local valText = Instance.new("TextLabel", frame)
+    valText.Size = UDim2.new(0.5, -15, 0, 20); valText.Position = UDim2.new(0.5, 0, 0, 5); valText.BackgroundTransparency = 1
+    valText.Text = tostring(defaultVal); valText.TextColor3 = CurrentThemeColor; valText.Font = Enum.Font.GothamBold; valText.TextSize = 12; valText.TextXAlignment = Enum.TextXAlignment.Right
+    table.insert(ThemedTexts, valText)
+
+    local sliderBG = Instance.new("Frame", frame)
+    sliderBG.Size = UDim2.new(1, -30, 0, 6); sliderBG.Position = UDim2.new(0, 15, 0, 30); sliderBG.BackgroundColor3 = UIColors.Background
+    Instance.new("UICorner", sliderBG).CornerRadius = UDim.new(1, 0)
+
+    local sliderFill = Instance.new("Frame", sliderBG)
+    sliderFill.Size = UDim2.new((defaultVal - min) / (max - min), 0, 1, 0); sliderFill.BackgroundColor3 = CurrentThemeColor
+    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1, 0); table.insert(ThemedBackgrounds, {Element = sliderFill, IsToggle = false})
+
+    local sliderBtn = Instance.new("TextButton", sliderBG)
+    sliderBtn.Size = UDim2.new(1, 0, 1, 20); sliderBtn.Position = UDim2.new(0, 0, 0.5, -10); sliderBtn.BackgroundTransparency = 1; sliderBtn.Text = ""
+
+    local sliding = false
+    sliderBtn.InputBegan:Connect(function(input) 
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then sliding = true end 
+    end)
+    UserInputService.InputEnded:Connect(function(input) 
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and sliding then sliding = false; SaveSettings() end 
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local perc = math.clamp((input.Position.X - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
+            sliderFill.Size = UDim2.new(perc, 0, 1, 0)
+            local val = min + ((max - min) * perc)
+            if not isFloat then val = math.floor(val) else val = math.floor(val * 100) / 100 end
+            valText.Text = tostring(val); callback(val)
+        end
+    end)
+end
+
+-- التحكم في حجم القائمة الكلية بـ (+ و -)
+local function CreateSizeControl(parent, text)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, -10, 0, 35)
     frame.BackgroundColor3 = UIColors.Element
@@ -963,57 +1155,46 @@ local function CreateStepper(parent, text, min, max, step, defaultVal, callback)
     lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-    local controls = Instance.new("Frame", frame)
-    controls.Size = UDim2.new(0.4, 0, 1, 0)
-    controls.Position = UDim2.new(0.6, -10, 0, 0)
-    controls.BackgroundTransparency = 1
-
-    local minusBtn = Instance.new("TextButton", controls)
-    minusBtn.Size = UDim2.new(0, 25, 0, 25)
-    minusBtn.Position = UDim2.new(0, 0, 0.5, -12.5)
-    minusBtn.BackgroundColor3 = UIColors.Background
+    local minusBtn = Instance.new("TextButton", frame)
+    minusBtn.Size = UDim2.new(0, 30, 0, 25)
+    minusBtn.Position = UDim2.new(1, -90, 0, 5)
+    minusBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     minusBtn.Text = "-"
-    minusBtn.TextColor3 = UIColors.Text
+    minusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     minusBtn.Font = Enum.Font.GothamBold
-    minusBtn.TextSize = 16
     Instance.new("UICorner", minusBtn).CornerRadius = UDim.new(0, 4)
 
-    local valTxt = Instance.new("TextLabel", controls)
-    valTxt.Size = UDim2.new(1, -60, 1, 0)
-    valTxt.Position = UDim2.new(0, 30, 0, 0)
-    valTxt.BackgroundTransparency = 1
-    valTxt.Text = tostring(defaultVal)
-    valTxt.TextColor3 = CurrentThemeColor
-    valTxt.Font = Enum.Font.GothamBold
-    valTxt.TextSize = 13
-    table.insert(ThemedTexts, valTxt)
-
-    local plusBtn = Instance.new("TextButton", controls)
-    plusBtn.Size = UDim2.new(0, 25, 0, 25)
-    plusBtn.Position = UDim2.new(1, -25, 0.5, -12.5)
-    plusBtn.BackgroundColor3 = UIColors.Background
+    local plusBtn = Instance.new("TextButton", frame)
+    plusBtn.Size = UDim2.new(0, 30, 0, 25)
+    plusBtn.Position = UDim2.new(1, -40, 0, 5)
+    plusBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     plusBtn.Text = "+"
-    plusBtn.TextColor3 = UIColors.Text
+    plusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     plusBtn.Font = Enum.Font.GothamBold
-    plusBtn.TextSize = 16
     Instance.new("UICorner", plusBtn).CornerRadius = UDim.new(0, 4)
 
-    local currentVal = defaultVal
+    local valLbl = Instance.new("TextLabel", frame)
+    valLbl.Size = UDim2.new(0, 20, 0, 25)
+    valLbl.Position = UDim2.new(1, -60, 0, 5)
+    valLbl.BackgroundTransparency = 1
+    valLbl.Text = tostring(math.floor(Config.MenuScale * 100)) .. "%"
+    valLbl.TextColor3 = CurrentThemeColor
+    valLbl.Font = Enum.Font.GothamBold
+    valLbl.TextSize = 12
+    table.insert(ThemedTexts, valLbl)
 
     minusBtn.MouseButton1Click:Connect(function()
-        currentVal = math.clamp(currentVal - step, min, max)
-        if step < 1 then currentVal = math.floor(currentVal * 100 + 0.5) / 100 end
-        valTxt.Text = tostring(currentVal)
-        callback(currentVal)
+        Config.MenuScale = math.clamp(Config.MenuScale - 0.1, 0.5, 1.5)
+        MainScale.Scale = Config.MenuScale
+        valLbl.Text = tostring(math.floor(Config.MenuScale * 100)) .. "%"
         SaveSettings()
         PlaySound(true)
     end)
 
     plusBtn.MouseButton1Click:Connect(function()
-        currentVal = math.clamp(currentVal + step, min, max)
-        if step < 1 then currentVal = math.floor(currentVal * 100 + 0.5) / 100 end
-        valTxt.Text = tostring(currentVal)
-        callback(currentVal)
+        Config.MenuScale = math.clamp(Config.MenuScale + 0.1, 0.5, 1.5)
+        MainScale.Scale = Config.MenuScale
+        valLbl.Text = tostring(math.floor(Config.MenuScale * 100)) .. "%"
         SaveSettings()
         PlaySound(true)
     end)
@@ -1116,23 +1297,74 @@ local function UpdateUITransparency(val)
     for _, el in ipairs(UIElements) do if el then el.BackgroundTransparency = val end end
 end
 
--- تم استبدال أشرطة السحب (Sliders) بأزرار (Stepper) لسهولة الاستخدام بالهاتف
+-- ===========================================================================
+-- [[ بناء المحتوى داخل الأقسام ]]
+-- ===========================================================================
+
+-- 1. قسم Combat
 CreateDropdown(CombatPage, "Bring Target Mode", {"ALL", "CLOSEST", "SELECTED LIST"}, Config.TargetPlayer, function(val) Config.TargetPlayer = val end)
 CreatePlayerList(CombatPage, "Select Multi-Bring Targets", Config.BringTargets)
 CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(val) Config.SpamBringEnabled = val; UpdateSpamBring() end)
-CreateStepper(CombatPage, "Bring Distance", -10, 10, 0.5, Config.BringDistance, function(val) Config.BringDistance = val end)
+CreateSlider(CombatPage, "Bring Distance", -10, 10, Config.BringDistance, true, function(val) Config.BringDistance = val end)
 CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(val) Config.AbsoluteAnchorEnabled = val; UpdateAbsoluteAnchor() end)
 
+-- 2. قسم Fling
 CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
 CreateButton(FlingPage, "START MULTI-FLING", Color3.fromRGB(0, 150, 0), function() StartFlingSystem() end)
 CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(150, 0, 0), function() StopFlingSystem() end)
 
+-- 3. قسم ESP
 CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(val) Config.ShowESP = val end)
 CreateToggle(ESPPage, "Enable Skeleton ESP", Config.ShowSkeleton, function(val) Config.ShowSkeleton = val end)
 CreateToggle(ESPPage, "Enable Hand Aura", Config.ShowAura, function(val) Config.ShowAura = val; UpdateAuraState() end)
 
-CreateToggle(SettingsPage, "Show Watermark & FPS", Config.ShowWatermark, function(val) Config.ShowWatermark = val; TopStatsFrame.Visible = val end)
-CreateStepper(SettingsPage, "UI Background Transparency", 0, 1, 0.1, Config.UITransparency, function(val) Config.UITransparency = val; UpdateUITransparency(val) end)
+CreateButton(ESPPage, "MAP ESP", nil, function()
+    local url = "https://raw.githubusercontent.com/vivnzo/MAP/refs/heads/main/README.md"
+    local success, result = pcall(function() return game:HttpGet(url) end)
+    if success then
+        local loadedScript, err = loadstring(result)
+        if loadedScript then loadedScript(); SendNotification("System", "MAP ESP Loaded Successfully", 3)
+        else warn("Compile Error:", err); SendNotification("Error", "Failed to compile MAP ESP script.", 3) end
+    else SendNotification("Error", "Could not fetch script from GitHub.", 3) end
+end)
+
+-- 4. قسم Graphic 
+CreateToggle(GraphicPage, "Show Watermark & FPS", Config.ShowWatermark, function(val) Config.ShowWatermark = val; TopStatsFrame.Visible = val end)
+
+CreateButton(GraphicPage, "LOAD LOW GRAPHICS SCRIPT", nil, function()
+    local url = "https://raw.githubusercontent.com/vivnzo/LOW-V1/refs/heads/main/README.md"
+    local success, result = pcall(function() return game:HttpGet(url) end)
+    if success then
+        local loadedScript, err = loadstring(result)
+        if loadedScript then loadedScript(); SendNotification("System", "Low Graphics Applied!", 3)
+        else warn("Compile Error:", err); SendNotification("Error", "Failed to load Low Graphics script.", 3) end
+    else SendNotification("Error", "Could not fetch script from GitHub.", 3) end
+end)
+
+CreateButton(GraphicPage, "HIGH GRAPHICS (SHADERS)", Color3.fromRGB(80, 40, 150), function()
+    pcall(function()
+        local CC = Lighting:FindFirstChildOfClass("ColorCorrectionEffect") or Instance.new("ColorCorrectionEffect", Lighting)
+        CC.Contrast = 0.15
+        CC.Saturation = 0.2
+        CC.Brightness = -0.05 
+        
+        local Blur = Lighting:FindFirstChildOfClass("BlurEffect") or Instance.new("BlurEffect", Lighting)
+        Blur.Size = 3 
+        
+        local Bloom = Lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect", Lighting)
+        Bloom.Intensity = 0.8
+        Bloom.Size = 24
+        Bloom.Threshold = 1.5
+        
+        Lighting.GlobalShadows = true
+        SendNotification("Graphic System", "High Graphics (Shaders) Applied!", 3)
+    end)
+end)
+
+-- 5. قسم Settings
+-- تم إزالة خيار إختصار لوحة المفاتيح
+CreateSizeControl(SettingsPage, "Global Menu Scale") -- إضافة التحكم في حجم القائمة الكلية بـ (+ و -)
+CreateSlider(SettingsPage, "UI Background Transparency", 0, 1, Config.UITransparency, true, function(val) Config.UITransparency = val; UpdateUITransparency(val) end)
 CreateDropdown(SettingsPage, "UI Stroke Color Preset", {"Rainbow", "Purple", "White", "Black", "Red", "Blue", "Green"}, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
 
 CreateButton(SettingsPage, "REJOIN SERVER", Color3.fromRGB(40, 40, 50), function()
@@ -1174,6 +1406,9 @@ RunService.RenderStepped:Connect(function()
             if bg.IsToggle then if bg.GetState() then bg.Element.BackgroundColor3 = rainbowColor end
             else bg.Element.BackgroundColor3 = rainbowColor end
         end
+        for _, tb in pairs(TabButtonsList) do
+            if tb.IsActive then tb.Btn.BackgroundColor3 = rainbowColor end
+        end
     end
 
     for _, trail in ipairs(ActiveTrails) do
@@ -1192,5 +1427,6 @@ RunService.RenderStepped:Connect(function()
     CombatPage.CanvasSize = UDim2.new(0, 0, 0, CombatLayout.AbsoluteContentSize.Y + 20)
     FlingPage.CanvasSize = UDim2.new(0, 0, 0, FlingLayout.AbsoluteContentSize.Y + 20)
     ESPPage.CanvasSize = UDim2.new(0, 0, 0, ESPLayout.AbsoluteContentSize.Y + 20)
+    GraphicPage.CanvasSize = UDim2.new(0, 0, 0, GraphicLayout.AbsoluteContentSize.Y + 20)
     SettingsPage.CanvasSize = UDim2.new(0, 0, 0, SetLayout.AbsoluteContentSize.Y + 20)
 end)
