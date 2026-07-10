@@ -1,9 +1,9 @@
 --[[
     ===========================================================================
-    PROJECT     : VI HOEP - COMBAT SUPREMACY + VNZO CINEMATIC LOADING (V4 INTEGRATED)
+    PROJECT     : VI HOEP - COMBAT SUPREMACY + VNZO CINEMATIC LOADING
     STYLE       : DYNAMIC NEON / COSMIC / GLASSMORPHISM
-    FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, GRAPHICS, ACCESSORIES ACTIVATOR
-    MODIFIED    : ULTIMATE UNLOCKER (ALL AURAS & EMOTES) + PERFECT UI SCALING + MOBILE FLY FIX
+    FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, GRAPHICS
+    MODIFIED    : ULTIMATE UNLOCKER + ACCESSORIES SELECTION LIST (FIXED TABS)
     ===========================================================================
 ]]
 
@@ -37,6 +37,7 @@ local Config = {
     TargetPlayer = "SELECTED LIST", 
     FlingTargets = {}, 
     BringTargets = {}, 
+    SelectedAccessories = {}, -- قائمة التحديد الجديدة للإكسسوارات
     BringDistance = -3.5, 
     SpamBringEnabled = false,
     AbsoluteAnchorEnabled = false,
@@ -262,8 +263,8 @@ do
     task.wait(0.6)
     
     pcall(function() StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, true) end)
-    for _, gui in ipairs(PlayerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") and gui ~= LoadingScreenGui and hiddenGuis[gui] then gui.Enabled = true end
+    for _, gui in ipairs(hiddenGuis) do
+        if gui and gui.Parent then gui.Enabled = true end
     end
     
     if gradientConnection then gradientConnection:Disconnect() end
@@ -346,103 +347,6 @@ local function SendNotification(title, text, duration)
         task.wait(0.3)
         notifFrame:Destroy()
     end)
-end
-
--- ===========================================================================
--- [[ دالة تفصيلية للحام الإكسسوار في مكانه الصحيح وتفعيل السكربتات ]]
--- ===========================================================================
-
-local function PerfectEquip(itemName)
-    local character = LocalPlayer.Character
-    if not character then return false, "NO CHAR" end
-
-    local targetItem = nil
-    for _, obj in pairs(game:GetDescendants()) do
-        if obj.Name == itemName and (obj:IsA("Accessory") or obj:IsA("Model")) then
-            if not obj:IsA("Folder") and not obj:IsA("StringValue") then
-                targetItem = obj
-                break
-            end
-        end
-    end
-
-    if not targetItem then return false, "NOT FOUND" end
-
-    if character:FindFirstChild(itemName) then character[itemName]:Destroy() end
-
-    local clone = targetItem:Clone()
-    clone.Name = itemName
-    clone.Parent = character
-
-    local handle = clone:FindFirstChild("Handle") or clone:FindFirstChildWhichIsA("BasePart")
-    if not handle then
-        handle = clone.PrimaryPart or clone:FindFirstChildWhichIsA("MeshPart")
-    end
-
-    if handle then
-        local itemAttachment = clone:FindFirstChildWhichIsA("Attachment", true)
-        local characterAttachment = nil
-
-        if itemAttachment then
-            characterAttachment = character:FindFirstChild(itemAttachment.Name, true)
-        end
-
-        local weld = Instance.new("WeldConstraint")
-        weld.Name = "VI_HOEP_Weld"
-
-        if characterAttachment and itemAttachment then
-            handle.CFrame = characterAttachment.WorldCFrame * itemAttachment.CFrame:Inverse()
-            weld.Part0 = characterAttachment.Parent
-            weld.Part1 = handle
-            weld.Parent = handle
-            print("[VI HOEP] Snapped via Attachment: " .. itemAttachment.Name)
-        else
-            local upperTorso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
-            local head = character:FindFirstChild("Head")
-            
-            if string.match(string.lower(itemName), "wheel") or string.match(string.lower(itemName), "clover") or string.match(string.lower(itemName), "back") then
-                handle.CFrame = upperTorso.CFrame * CFrame.new(0, 0, 1.2) * CFrame.Angles(0, math.rad(180), 0)
-                weld.Part0 = upperTorso
-            elseif string.match(string.lower(itemName), "mask") or string.match(string.lower(itemName), "face") or string.match(string.lower(itemName), "head") then
-                handle.CFrame = head.CFrame * CFrame.new(0, 0, -0.6)
-                weld.Part0 = head
-            else
-                handle.CFrame = upperTorso.CFrame * CFrame.new(0, 0, 1)
-                weld.Part0 = upperTorso
-            end
-            weld.Part1 = handle
-            weld.Parent = handle
-        end
-        
-        for _, part in pairs(clone:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.Anchored = false
-                part.CanCollide = false
-                if part ~= handle then
-                    local w = Instance.new("WeldConstraint")
-                    w.Part0 = handle
-                    w.Part1 = part
-                    w.Parent = part
-                end
-            end
-        end
-    end
-
-    for _, val in pairs(LocalPlayer:GetDescendants()) do
-        if val:IsA("StringValue") and (string.find(string.lower(val.Name), "ugc") or string.find(string.lower(val.Name), "accessory") or string.find(string.lower(val.Name), "equip")) then
-            val.Value = itemName
-        end
-    end
-
-    for _, scr in pairs(clone:GetDescendants()) do
-        if scr:IsA("LocalScript") or scr:IsA("ModuleScript") then
-            scr.Disabled = true
-            scr.Disabled = false
-            scr.Parent = character
-        end
-    end
-
-    return true, "READY"
 end
 
 -- ===========================================================================
@@ -657,52 +561,49 @@ end
 local AnchorCFrame = nil
 local AbsoluteAnchorConn = nil
 local OriginalCollisions = {}
+local OriginalPlatformStand = false
+local OriginalAutoRotate = false
 
 local function UpdateAbsoluteAnchor()
     local myChar = LocalPlayer.Character
     local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    local hum = myChar and myChar:FindFirstChildOfClass("Humanoid")
     
     if Config.AbsoluteAnchorEnabled then
-        if myRoot and not AnchorCFrame then 
-            AnchorCFrame = myRoot.CFrame + Vector3.new(0, 30, 0) 
+        if myRoot and hum then
+            OriginalPlatformStand = hum.PlatformStand
+            OriginalAutoRotate = hum.AutoRotate
+            hum.PlatformStand = true
+            hum.AutoRotate = false
             OriginalCollisions = {}
             for _, part in pairs(myChar:GetDescendants()) do
                 if part:IsA("BasePart") then
                     OriginalCollisions[part] = part.CanCollide
+                    part.CanCollide = false
                 end
             end
+            if not AnchorCFrame then
+                AnchorCFrame = myRoot.CFrame + Vector3.new(0, 30, 0)
+            end
         end
+        
         if not AbsoluteAnchorConn then
             AbsoluteAnchorConn = RunService.Stepped:Connect(function(runtime, dt)
                 if AnchorCFrame and LocalPlayer.Character then
                     local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    local hum2 = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                     
-                    if root and hum then
+                    if root and hum2 then
                         local deltaTime = dt or 0.016
                         local flySpeed = 60
                         local moveDirection = Vector3.new(0, 0, 0)
                         
-                        -- كشف الحركة لأجهزة الـ PC
                         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - Camera.CFrame.RightVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Camera.CFrame.RightVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
                         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
-                        
-                        -- إصلاح الجوال المتطور: استخراج اتجاه عصا التحكم الافتراضية للجوال ودمجها مع زاوية رؤية الكاميرا
-                        if moveDirection.Magnitude == 0 and hum.MoveDirection.Magnitude > 0 then
-                            local camLook = Camera.CFrame.LookVector
-                            local flatLook = Vector3.new(camLook.X, 0, camLook.Z).Unit
-                            local dot = hum.MoveDirection:Dot(flatLook)
-                            moveDirection = hum.MoveDirection + Vector3.new(0, camLook.Y * dot, 0)
-                        end
-                        
-                        -- دعم زر القفز للجوال للارتفاع لأعلى
-                        if hum.Jump then
-                            moveDirection = moveDirection + Vector3.new(0, 1, 0)
-                        end
                         
                         if moveDirection.Magnitude > 0 then
                             AnchorCFrame = AnchorCFrame + (moveDirection.Unit * flySpeed * deltaTime)
@@ -718,18 +619,20 @@ local function UpdateAbsoluteAnchor()
                         end
                         
                         root.CFrame = CFrame.new(AnchorCFrame.Position) * CFrame.lookAt(Vector3.new(0,0,0), flatLook).Rotation
-                        
-                        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                            if part:IsA("BasePart") then part.CanCollide = false end
-                        end
+                        hum2.PlatformStand = true
                     end
                 end
             end)
         end
     else
-        if AbsoluteAnchorConn then AbsoluteAnchorConn:Disconnect() AbsoluteAnchorConn = nil end
+        if AbsoluteAnchorConn then 
+            AbsoluteAnchorConn:Disconnect() 
+            AbsoluteAnchorConn = nil 
+        end
         AnchorCFrame = nil
-        if myChar then
+        if myChar and hum then
+            hum.PlatformStand = OriginalPlatformStand
+            hum.AutoRotate = OriginalAutoRotate
             for part, state in pairs(OriginalCollisions) do
                 if part and part.Parent then
                     part.CanCollide = state
@@ -741,6 +644,116 @@ local function UpdateAbsoluteAnchor()
 end
 
 -- ===========================================================================
+-- [[ نظام الإكسسوارات ]]
+-- ===========================================================================
+
+local function PerfectEquip(itemName)
+    local character = LocalPlayer.Character
+    if not character then return false, "NO CHAR" end
+
+    local targetItem = nil
+    for _, obj in pairs(game:GetDescendants()) do
+        if obj.Name == itemName and (obj:IsA("Accessory") or obj:IsA("Model")) then
+            if not obj:IsA("Folder") and not obj:IsA("StringValue") then
+                targetItem = obj
+                break
+            end
+        end
+    end
+
+    if not targetItem then return false, "NOT FOUND" end
+
+    if character:FindFirstChild(itemName) then 
+        character[itemName]:Destroy() 
+    end
+
+    local clone = targetItem:Clone()
+    clone.Name = itemName
+    clone.Parent = character
+
+    local handle = clone:FindFirstChild("Handle") or clone:FindFirstChildWhichIsA("BasePart")
+    if not handle then
+        handle = clone.PrimaryPart or clone:FindFirstChildWhichIsA("MeshPart")
+    end
+
+    if handle then
+        local itemAttachment = clone:FindFirstChildWhichIsA("Attachment", true)
+        local characterAttachment = nil
+        if itemAttachment then
+            characterAttachment = character:FindFirstChild(itemAttachment.Name, true)
+        end
+
+        local weld = Instance.new("WeldConstraint")
+        weld.Name = "VI_HOEP_Weld"
+
+        if characterAttachment and itemAttachment then
+            handle.CFrame = characterAttachment.WorldCFrame * itemAttachment.CFrame:Inverse()
+            weld.Part0 = characterAttachment.Parent
+            weld.Part1 = handle
+            weld.Parent = handle
+        else
+            local upperTorso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+            local head = character:FindFirstChild("Head")
+            
+            if string.match(string.lower(itemName), "wheel") or string.match(string.lower(itemName), "clover") or string.match(string.lower(itemName), "back") then
+                handle.CFrame = upperTorso.CFrame * CFrame.new(0, 0, 1.2) * CFrame.Angles(0, math.rad(180), 0)
+                weld.Part0 = upperTorso
+            elseif string.match(string.lower(itemName), "mask") or string.match(string.lower(itemName), "face") or string.match(string.lower(itemName), "head") then
+                handle.CFrame = head.CFrame * CFrame.new(0, 0, -0.6)
+                weld.Part0 = head
+            else
+                handle.CFrame = upperTorso.CFrame * CFrame.new(0, 0, 1)
+                weld.Part0 = upperTorso
+            end
+            weld.Part1 = handle
+            weld.Parent = handle
+        end
+        
+        for _, part in pairs(clone:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.Anchored = false
+                part.CanCollide = false
+                if part ~= handle then
+                    local w = Instance.new("WeldConstraint")
+                    w.Part0 = handle
+                    w.Part1 = part
+                    w.Parent = part
+                end
+            end
+        end
+    end
+
+    for _, scr in pairs(clone:GetDescendants()) do
+        if scr:IsA("LocalScript") or scr:IsA("ModuleScript") then
+            scr.Disabled = true
+            scr.Disabled = false
+            scr.Parent = character
+        end
+    end
+
+    return true, "READY"
+end
+
+local function RemoveAllAccessories()
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    local toRemove = {}
+    for _, child in ipairs(char:GetChildren()) do
+        if child:IsA("Accessory") or 
+           (child:IsA("Model") and child:FindFirstChild("Handle")) or
+           (child:IsA("BasePart") and child:FindFirstChild("VI_HOEP_Weld")) then
+            table.insert(toRemove, child)
+        end
+    end
+    
+    for _, obj in ipairs(toRemove) do
+        obj:Destroy()
+    end
+    SendNotification("Accessories", "Removed " .. #toRemove .. " item(s).", 2)
+end
+
+-- ===========================================================================
 -- [[ الواجهة المرئية الرئيسية ]]
 -- ===========================================================================
 
@@ -748,6 +761,7 @@ local ThemedTexts = {}
 local ThemedBackgrounds = {}
 local ThemedStrokes = {}
 local ThemedPlayerListBtns = {} 
+local ThemedAccessoryListBtns = {}
 local ScrollFrames = {}
 local TabButtonsList = {}
 local UIElements = {}
@@ -810,12 +824,12 @@ table.insert(ThemedTexts, Title)
 
 local dragging, dragInput, dragStart, startPos
 Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true; dragStart = input.Position; startPos = MainFrame.Position
         input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
     end
 end)
-Header.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
+Header.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
         local delta = input.Position - dragStart
@@ -866,7 +880,7 @@ ViBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ===========================================================================
--- [[ بناء نظام التبويبات ]]
+-- [[ بناء نظام التبويبات الجديد والمحسّن ]]
 -- ===========================================================================
 
 local TabBar = Instance.new("Frame", MainFrame)
@@ -875,6 +889,7 @@ TabBar.Position = UDim2.new(0, 0, 0, 35)
 TabBar.BackgroundColor3 = UIColors.Element
 TabBar.BackgroundTransparency = Config.UITransparency
 TabBar.BorderSizePixel = 0
+TabBar.ClipsDescendants = true
 
 local TabListLayout = Instance.new("UIListLayout", TabBar)
 TabListLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -945,7 +960,8 @@ local SettingsPage = CreatePage()
 
 local function CreateTabBtn(text, targetPage, isDefault)
     local btn = Instance.new("TextButton", TabBar)
-    btn.Size = UDim2.new(0, 92, 1, -6)
+    -- تم تصغير الحجم إلى 85 ليتناسب مع الـ 5 تبويبات ويسع داخل المربع الرئيسي بدون خروج
+    btn.Size = UDim2.new(0, 85, 1, -6) 
     btn.BackgroundColor3 = isDefault and CurrentThemeColor or UIColors.Element
     btn.BackgroundTransparency = isDefault and 0.2 or 1
     btn.Text = text
@@ -1423,11 +1439,8 @@ local function CreatePlayerList(parent, text, targetTable)
     RefreshList()
 end
 
--- ===========================================================================
--- [[ دالة مخصصة لبناء نظام مصفوفة اختيار الإكسسوارات مع تغيير الألوان التفاعلي ]]
--- ===========================================================================
-
-local function CreateAccessoryList(parent, text)
+-- دالة قائمة الاختيار للإكسسوارات مع ميزة اللون الثابت
+local function CreateAccessoryList(parent, text, targetTable)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, -10, 0, 180)
     frame.BackgroundColor3 = UIColors.Element
@@ -1446,7 +1459,7 @@ local function CreateAccessoryList(parent, text)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local scroll = Instance.new("ScrollingFrame", frame)
-    scroll.Size = UDim2.new(1, -20, 1, -40)
+    scroll.Size = UDim2.new(1, -20, 1, -70)
     scroll.Position = UDim2.new(0, 10, 0, 30)
     scroll.BackgroundTransparency = 1
     scroll.ScrollBarThickness = 4
@@ -1456,18 +1469,81 @@ local function CreateAccessoryList(parent, text)
     local layout = Instance.new("UIListLayout", scroll)
     layout.Padding = UDim.new(0, 5)
 
-    local function RefreshAccessories()
+    local removeAllBtn = Instance.new("TextButton", frame)
+    removeAllBtn.Size = UDim2.new(0.5, -15, 0, 25)
+    removeAllBtn.Position = UDim2.new(0, 10, 1, -30)
+    removeAllBtn.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
+    removeAllBtn.Text = "Remove All"
+    removeAllBtn.TextColor3 = Color3.fromRGB(255, 200, 200)
+    removeAllBtn.Font = Enum.Font.Gotham
+    removeAllBtn.TextSize = 12
+    Instance.new("UICorner", removeAllBtn).CornerRadius = UDim.new(0, 4)
+    
+    local refreshBtn = Instance.new("TextButton", frame)
+    refreshBtn.Size = UDim2.new(0.5, -15, 0, 25)
+    refreshBtn.Position = UDim2.new(0.5, 5, 1, -30)
+    refreshBtn.BackgroundColor3 = UIColors.Background
+    refreshBtn.Text = "Refresh List"
+    refreshBtn.TextColor3 = UIColors.Text
+    refreshBtn.Font = Enum.Font.Gotham
+    refreshBtn.TextSize = 12
+    Instance.new("UICorner", refreshBtn).CornerRadius = UDim.new(0, 4)
+
+    local function RefreshList()
         for _, child in pairs(scroll:GetChildren()) do
             if child:IsA("TextButton") then child:Destroy() end
         end
+        for i = #ThemedAccessoryListBtns, 1, -1 do
+            if ThemedAccessoryListBtns[i].Table == targetTable then
+                table.remove(ThemedAccessoryListBtns, i)
+            end
+        end
 
         local found = {}
-        local list = {}
+        local yOffset = 0
+        
         local function add(name)
             if name and name ~= "" and not found[name] then
                 if string.len(name) > 2 and not string.match(name, "Weld") and not string.match(name, "Script") then
                     found[name] = true
-                    table.insert(list, name)
+                    
+                    local btn = Instance.new("TextButton", scroll)
+                    btn.Size = UDim2.new(1, -10, 0, 25)
+                    btn.BackgroundColor3 = targetTable[name] and CurrentThemeColor or UIColors.Background
+                    btn.Text = "  " .. name
+                    btn.TextColor3 = UIColors.Text
+                    btn.Font = Enum.Font.Gotham
+                    btn.TextSize = 12
+                    btn.TextXAlignment = Enum.TextXAlignment.Left
+                    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+                    table.insert(ThemedAccessoryListBtns, {Btn = btn, Table = targetTable, Name = name})
+
+                    btn.MouseButton1Click:Connect(function()
+                        targetTable[name] = not targetTable[name]
+                        PlaySound(targetTable[name])
+                        
+                        if targetTable[name] then
+                            local success, msg = PerfectEquip(name)
+                            if not success then
+                                targetTable[name] = false -- العودة في حال الفشل
+                                SendNotification("Error", "Failed to equip: " .. msg, 2)
+                            else
+                                SendNotification("Equipped", name, 2)
+                            end
+                        else
+                            local char = LocalPlayer.Character
+                            if char then
+                                for _, child in ipairs(char:GetChildren()) do
+                                    if child.Name == name and (child:IsA("Accessory") or child:FindFirstChild("VI_HOEP_Weld") or child:IsA("Model")) then
+                                        child:Destroy()
+                                    end
+                                end
+                            end
+                            SendNotification("Removed", name, 2)
+                        end
+                    end)
+                    yOffset = yOffset + 30
                 end
             end
         end
@@ -1490,50 +1566,22 @@ local function CreateAccessoryList(parent, text)
             "Garou's Bandages", "Saitama's Shoes", "Angle Chain", "Goku tail", "Death Note", "Mahoraga wheel"
         }
         for _, v in ipairs(hardcoded) do add(v) end
-        table.sort(list, function(a, b) return a:lower() < b:lower() end)
-
-        local yOffset = 0
-        for _, name in ipairs(list) do
-            local btn = Instance.new("TextButton", scroll)
-            btn.Size = UDim2.new(1, -10, 0, 25)
-            btn.BackgroundColor3 = UIColors.Background
-            btn.Text = "  ⚡ " .. name
-            btn.TextColor3 = UIColors.Text
-            btn.Font = Enum.Font.Gotham
-            btn.TextSize = 12
-            btn.TextXAlignment = Enum.TextXAlignment.Left
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-
-            local btnStroke = Instance.new("UIStroke", btn)
-            btnStroke.Thickness = 1
-            btnStroke.Color = Color3.fromRGB(45, 45, 55)
-
-            btn.MouseButton1Click:Connect(function()
-                local success, msg = PerfectEquip(name)
-                local origText = btn.Text
-                
-                if success then
-                    btn.Text = "  ✨ " .. name .. " [" .. msg .. "]"
-                    TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(0, 180, 0), TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-                    TweenService:Create(btnStroke, TweenInfo.new(0.1), {Color = Color3.fromRGB(0, 255, 0)}):Play()
-                else
-                    btn.Text = "  ❌ " .. name .. " [" .. msg .. "]"
-                    TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(180, 0, 0), TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-                    TweenService:Create(btnStroke, TweenInfo.new(0.1), {Color = Color3.fromRGB(255, 0, 0)}):Play()
-                end
-                
-                task.delay(1.5, function()
-                    btn.Text = origText
-                    TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = UIColors.Background, TextColor3 = UIColors.Text}):Play()
-                    TweenService:Create(btnStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(45, 45, 55)}):Play()
-                end)
-            end)
-            yOffset = yOffset + 30
-        end
+        
         scroll.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     end
 
-    RefreshAccessories()
+    removeAllBtn.MouseButton1Click:Connect(function()
+        for k in pairs(targetTable) do targetTable[k] = false end
+        RemoveAllAccessories()
+        PlaySound(false)
+    end)
+    
+    refreshBtn.MouseButton1Click:Connect(function()
+        RefreshList()
+        PlaySound(true)
+    end)
+
+    RefreshList()
 end
 
 local function UpdateUITransparency(val)
@@ -1814,7 +1862,7 @@ CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(150, 0, 0), function()
     StopFlingSystem()
 end)
 
--- 3. ESP & Aura & Titles
+-- 3. ESP & Aura & Titles (مع قائمة الإكسسوارات الجديدة)
 CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(val)
     Config.ShowESP = val
 end)
@@ -1825,6 +1873,9 @@ CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(val)
     Config.ShowAura = val
     UpdateAuraState()
 end)
+
+-- قائمة الإكسسوارات الجديدة بالتحديد المستمر
+CreateAccessoryList(ESPPage, "Select Accessories to Equip", Config.SelectedAccessories)
 
 CreateButton(ESPPage, "⚡ GET ALL AURAS & EMOTES ⚡", Color3.fromHex("#A020F0"), function()
     UnlockAllCosmetics()
@@ -1846,26 +1897,6 @@ end)
 CreateButton(ESPPage, "↻ Scan & Refresh Titles", nil, function()
     TitleSelector.Refresh(ScanForTitles())
     SendNotification("System", "Titles refreshed successfully!", 3)
-end)
-
--- إضافة قائمة الإكسسوارات الاحترافية التفاعلية هنا (تم الدمج بالكامل بنظام التحقق من الألوان)
-CreateAccessoryList(ESPPage, "Select Accessories to Equip")
-
-CreateButton(ESPPage, "LOAD MAP ESP SCRIPT", nil, function()
-    local url = "https://raw.githubusercontent.com/vivnzo/MAP/refs/heads/main/README.md"
-    local success, result = pcall(function() return game:HttpGet(url) end)
-    if success then
-        local loadedScript, err = loadstring(result)
-        if loadedScript then
-            loadedScript()
-            SendNotification("System", "MAP ESP Loaded Successfully", 3)
-        else
-            warn("Compile Error:", err)
-            SendNotification("Error", "Failed to compile MAP ESP script.", 3)
-        end
-    else
-        SendNotification("Error", "Could not fetch script from GitHub.", 3)
-    end
 end)
 
 -- 4. Graphic
@@ -1999,6 +2030,17 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
+    
+    -- إضافة تحديث الألوان لقائمة الإكسسوارات ليظل مضيئاً عند التحديد
+    for _, item in pairs(ThemedAccessoryListBtns) do
+        if item.Btn and item.Btn.Parent then
+            if item.Table[item.Name] then
+                item.Btn.BackgroundColor3 = CurrentThemeColor
+            else
+                item.Btn.BackgroundColor3 = UIColors.Background
+            end
+        end
+    end
 end)
 
 UserInputService.InputBegan:Connect(function(input, processed)
@@ -2008,5 +2050,3 @@ UserInputService.InputBegan:Connect(function(input, processed)
         PlaySound(MainFrame.Visible)
     end
 end)
-
-print("VI HOEP: ULTIMATE INTEGRATED SCRIPT LOADED SUCCESSFULLY!")
