@@ -3,7 +3,7 @@
     PROJECT     : VI HOEP - COMBAT SUPREMACY + VNZO CINEMATIC LOADING
     STYLE       : DYNAMIC NEON / COSMIC / GLASSMORPHISM
     FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, GRAPHICS
-    MODIFIED    : MINI TOGGLE ICON + PERFECT UI SCALING IN SETTINGS (+ / -)
+    MODIFIED    : ULTIMATE UNLOCKER (ALL AURAS & EMOTES) + PERFECT UI SCALING
     ===========================================================================
 ]]
 
@@ -32,7 +32,7 @@ local Config = {
     UIStrokeStyle = "Purple",
     UIStrokeSpeed = 3,
     UITransparency = 0,
-    UIScale = 1.0, -- إعداد الحجم الجديد
+    UIScale = 1.0, 
     ShowWatermark = true,
     TargetPlayer = "SELECTED LIST", 
     FlingTargets = {}, 
@@ -43,7 +43,6 @@ local Config = {
     ShowESP = true,
     ShowSkeleton = false,
     ShowAura = false,
-    SelectedAura = "Select Aura...",
     SelectedTitle = "Select Title..."
 }
 
@@ -665,7 +664,6 @@ StatsLabel.TextSize = 11
 table.insert(ThemedTexts, StatsLabel)
 table.insert(ThemedStrokes, TopStatsStroke)
 
--- الإطار الرئيسي
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 500, 0, 420)
 MainFrame.Position = UDim2.new(0.5, -250, 0.5, -210)
@@ -675,7 +673,6 @@ MainFrame.BorderSizePixel = 0
 MainFrame.Visible = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 
--- أداة التحجيم السحرية (UIScale) التي تمنع خراب القائمة عند التصغير/التكبير
 local MainScale = Instance.new("UIScale", MainFrame)
 MainScale.Scale = Config.UIScale or 1.0
 
@@ -700,7 +697,6 @@ Title.TextSize = 16
 Title.TextXAlignment = Enum.TextXAlignment.Center
 table.insert(ThemedTexts, Title)
 
--- نظام سحب القائمة الرئيسية
 local dragging, dragInput, dragStart, startPos
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -723,14 +719,14 @@ end)
 local ViBtn = Instance.new("TextButton", ScreenGui)
 ViBtn.Name = "VI_MiniToggle"
 ViBtn.Size = UDim2.new(0, 35, 0, 35)
-ViBtn.Position = UDim2.new(0, 15, 0, 45) -- أعلى اليسار
+ViBtn.Position = UDim2.new(0, 15, 0, 45) 
 ViBtn.BackgroundColor3 = UIColors.Element
 ViBtn.BackgroundTransparency = 0.2
 ViBtn.Text = "VI"
 ViBtn.TextColor3 = CurrentThemeColor
 ViBtn.Font = Enum.Font.GothamBold
 ViBtn.TextSize = 14
-Instance.new("UICorner", ViBtn).CornerRadius = UDim.new(1, 0) -- جعلها دائرية
+Instance.new("UICorner", ViBtn).CornerRadius = UDim.new(1, 0) 
 
 local ViBtnStroke = Instance.new("UIStroke", ViBtn)
 ViBtnStroke.Thickness = 1.5
@@ -738,7 +734,6 @@ ViBtnStroke.Color = CurrentThemeColor
 table.insert(ThemedStrokes, ViBtnStroke)
 table.insert(ThemedTexts, ViBtn)
 
--- جعل الأيقونة قابلة للسحب بسلاسة
 local iconDragging, iconDragInput, iconDragStart, iconStartPos
 ViBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1084,9 +1079,6 @@ local function CreateSlider(parent, text, min, max, defaultVal, isFloat, callbac
     end)
 end
 
--- ===========================================================================
--- [[ دالة مخصصة لإنشاء أزرار تحكم التكبير والتصغير (+/-) في الإعدادات ]]
--- ===========================================================================
 local function CreateScaleControl(parent, text, defaultVal, callback)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, -10, 0, 35)
@@ -1330,7 +1322,7 @@ local function UpdateUITransparency(val)
 end
 
 -- ===========================================================================
--- [[ وظائف الفحص للمكتبات (Aura & Titles) ]]
+-- [[ وظائف الفحص للمكتبات (Aura & Titles) والفتح الشامل ]]
 -- ===========================================================================
 
 local ActiveTrails = {}
@@ -1374,26 +1366,43 @@ LocalPlayer.CharacterAdded:Connect(function()
     if Config.ShowAura then UpdateAuraState() end
 end)
 
-local function ScanForAuras()
-    local found = {}
-    local list = {}
+-- وظيفة الفتح الشامل (Ultimate Unlocker)
+local function UnlockAllCosmetics()
+    local RemotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
+    local foundAuras = {}
+    local foundEmotes = {}
+    
+    -- فحص الخوادم لجمع الهالات والرقصات
     for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
         if obj:IsA("Folder") and (string.match(string.lower(obj.Name), "aura") or string.match(string.lower(obj.Name), "auras")) then
             for _, child in pairs(obj:GetChildren()) do
-                if not found[child.Name] and not child:IsA("Script") and not child:IsA("LocalScript") then
-                    found[child.Name] = true
-                    table.insert(list, child.Name)
+                if not child:IsA("Script") and not child:IsA("LocalScript") then 
+                    foundAuras[child.Name] = true 
                 end
             end
-        elseif obj:IsA("StringValue") and string.match(string.lower(obj.Name), "aura") then
-            if not found[obj.Value] then
-                found[obj.Value] = true
-                table.insert(list, obj.Value)
+        elseif obj:IsA("Animation") then
+            foundEmotes[obj.Name] = true
+        end
+    end
+    
+    -- إرسال الإشارات لفتح كافة المحتويات
+    if RemotesFolder then
+        local AuraListEvent = RemotesFolder:FindFirstChild("UpdateAuraList")
+        if AuraListEvent and firesignal then
+            for name, _ in pairs(foundAuras) do
+                pcall(function() firesignal(AuraListEvent.OnClientEvent, name) end)
+            end
+        end
+        
+        local EmoteListEvent = RemotesFolder:FindFirstChild("UpdateEmoteList") or RemotesFolder:FindFirstChild("UpdateDanceList")
+        if EmoteListEvent and firesignal then
+            for name, _ in pairs(foundEmotes) do
+                pcall(function() firesignal(EmoteListEvent.OnClientEvent, name) end)
             end
         end
     end
-    if #list == 0 then table.insert(list, "No Auras Found") end
-    return list
+    
+    SendNotification("Ultimate Unlocker", "Unlocked all available Auras and Emotes!", 4)
 end
 
 local function ScanForTitles()
@@ -1596,17 +1605,9 @@ CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(val)
     UpdateAuraState()
 end)
 
-local AuraSelector = CreateDynamicDropdown(ESPPage, "Select Aura", ScanForAuras(), Config.SelectedAura, function(val)
-    Config.SelectedAura = val
-    local RemotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
-    if RemotesFolder and RemotesFolder:FindFirstChild("UpdateAura") then
-        pcall(function()
-            RemotesFolder.UpdateAura:FireServer(val)
-            SendNotification("Aura", "Aura '" .. val .. "' activated!", 2)
-        end)
-    else
-        SendNotification("Aura", "Remote 'UpdateAura' not found.", 2)
-    end
+-- زر جلب جميع الهالات والرقصات الشامل
+CreateButton(ESPPage, "⚡ GET ALL AURAS & EMOTES ⚡", Color3.fromHex("#A020F0"), function()
+    UnlockAllCosmetics()
 end)
 
 local TitleSelector = CreateDynamicDropdown(ESPPage, "Select Title", ScanForTitles(), Config.SelectedTitle, function(val)
@@ -1622,10 +1623,9 @@ local TitleSelector = CreateDynamicDropdown(ESPPage, "Select Title", ScanForTitl
     end
 end)
 
-CreateButton(ESPPage, "↻ Scan & Refresh Lists", nil, function()
-    AuraSelector.Refresh(ScanForAuras())
+CreateButton(ESPPage, "↻ Scan & Refresh Titles", nil, function()
     TitleSelector.Refresh(ScanForTitles())
-    SendNotification("System", "Auras & Titles refreshed successfully!", 3)
+    SendNotification("System", "Titles refreshed successfully!", 3)
 end)
 
 CreateButton(ESPPage, "LOAD MAP ESP SCRIPT", nil, function()
@@ -1690,7 +1690,6 @@ CreateTextBox(SettingsPage, "Menu Toggle Key", Config.ToggleKey, function(val)
     Config.ToggleKey = val
 end)
 
--- إضافة متحكم الحجم المتطور الذي طلبته داخل تبويب الإعدادات
 CreateScaleControl(SettingsPage, "Menu Size (Scale)", Config.UIScale, function(val)
     Config.UIScale = val
     MainScale.Scale = val
