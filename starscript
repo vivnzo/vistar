@@ -3,7 +3,7 @@
     PROJECT     : VI HOEP - COMBAT SUPREMACY + VNZO CINEMATIC LOADING
     STYLE       : DYNAMIC NEON / COSMIC / GLASSMORPHISM
     FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, GRAPHICS
-    MODIFIED    : ULTIMATE UNLOCKER + ACCESSORIES SELECTION LIST (FIXED TABS)
+    MODIFIED    : UNIFIED UNLOCKER (AURAS/EMOTES/TITLES) + MOBILE FLY FIX
     ===========================================================================
 ]]
 
@@ -37,14 +37,13 @@ local Config = {
     TargetPlayer = "SELECTED LIST", 
     FlingTargets = {}, 
     BringTargets = {}, 
-    SelectedAccessories = {}, -- قائمة التحديد الجديدة للإكسسوارات
+    SelectedAccessories = {},
     BringDistance = -3.5, 
     SpamBringEnabled = false,
     AbsoluteAnchorEnabled = false,
     ShowESP = true,
     ShowSkeleton = false,
-    ShowAura = false,
-    SelectedTitle = "Select Title..."
+    ShowAura = false
 }
 
 local function SaveSettings()
@@ -598,10 +597,12 @@ local function UpdateAbsoluteAnchor()
                         local flySpeed = 60
                         local moveDirection = Vector3.new(0, 0, 0)
                         
-                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - Camera.CFrame.RightVector end
-                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Camera.CFrame.RightVector end
+                        -- Horizontal Movement: يدعم الكيبورد والموبايل بفضل MoveDirection!
+                        if hum2.MoveDirection.Magnitude > 0 then
+                            moveDirection = moveDirection + hum2.MoveDirection
+                        end
+                        
+                        -- Vertical Movement: للأجهزة التي تمتلك كيبورد
                         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
                         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
                         
@@ -960,7 +961,6 @@ local SettingsPage = CreatePage()
 
 local function CreateTabBtn(text, targetPage, isDefault)
     local btn = Instance.new("TextButton", TabBar)
-    -- تم تصغير الحجم إلى 85 ليتناسب مع الـ 5 تبويبات ويسع داخل المربع الرئيسي بدون خروج
     btn.Size = UDim2.new(0, 85, 1, -6) 
     btn.BackgroundColor3 = isDefault and CurrentThemeColor or UIColors.Element
     btn.BackgroundTransparency = isDefault and 0.2 or 1
@@ -1439,7 +1439,6 @@ local function CreatePlayerList(parent, text, targetTable)
     RefreshList()
 end
 
--- دالة قائمة الاختيار للإكسسوارات مع ميزة اللون الثابت
 local function CreateAccessoryList(parent, text, targetTable)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, -10, 0, 180)
@@ -1526,7 +1525,7 @@ local function CreateAccessoryList(parent, text, targetTable)
                         if targetTable[name] then
                             local success, msg = PerfectEquip(name)
                             if not success then
-                                targetTable[name] = false -- العودة في حال الفشل
+                                targetTable[name] = false 
                                 SendNotification("Error", "Failed to equip: " .. msg, 2)
                             else
                                 SendNotification("Equipped", name, 2)
@@ -1594,7 +1593,7 @@ local function UpdateUITransparency(val)
 end
 
 -- ===========================================================================
--- [[ وظائف الفحص للمكتبات (Aura & Titles) والفتح الشامل ]]
+-- [[ وظائف الفحص للمكتبات (Aura & Titles) والفتح الشامل المدمج ]]
 -- ===========================================================================
 
 local ActiveTrails = {}
@@ -1638,7 +1637,8 @@ LocalPlayer.CharacterAdded:Connect(function()
     if Config.ShowAura then UpdateAuraState() end
 end)
 
-local function UnlockAllCosmetics()
+-- الزر الموحد الجديد لفتح (الهالات + الرقصات + الألقاب)
+local function UnlockAllCosmeticsAndTitles()
     local RemotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
     local foundAuras = {}
     local foundEmotes = {}
@@ -1656,6 +1656,7 @@ local function UnlockAllCosmetics()
     end
     
     if RemotesFolder then
+        -- فتح الهالات
         local AuraListEvent = RemotesFolder:FindFirstChild("UpdateAuraList")
         if AuraListEvent and firesignal then
             for name, _ in pairs(foundAuras) do
@@ -1663,46 +1664,39 @@ local function UnlockAllCosmetics()
             end
         end
         
+        -- فتح الرقصات
         local EmoteListEvent = RemotesFolder:FindFirstChild("UpdateEmoteList") or RemotesFolder:FindFirstChild("UpdateDanceList")
         if EmoteListEvent and firesignal then
             for name, _ in pairs(foundEmotes) do
                 pcall(function() firesignal(EmoteListEvent.OnClientEvent, name) end)
             end
         end
-    end
-    
-    SendNotification("Ultimate Unlocker", "Unlocked all available Auras and Emotes!", 4)
-end
 
-local function ScanForTitles()
-    local found = {}
-    local list = {}
-    local CommonTitles = {"Legend", "God", "Raid Boss", "VIP", "MVP", "Admin", "Developer", "Champion", "Hero", "Villain", "Pro", "Master", "King", "Queen"}
-    
-    for _, t in ipairs(CommonTitles) do 
-        found[t] = true
-        table.insert(list, t)
-    end
-
-    for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
-        if obj:IsA("StringValue") and string.match(string.lower(obj.Name), "title") then
-            if not found[obj.Value] then
-                found[obj.Value] = true
-                table.insert(list, obj.Value)
+        -- حقن الألقاب المخصصة
+        local TitleRemote = RemotesFolder:FindFirstChild("UpdateTitleTopbar")
+        if TitleRemote and firesignal then
+            local AddedTitles = {}
+            local SpecificTitles = {"Monster", "Legend", "Raid Boss", "God", "Noob", "VIP", "Champion"}
+            
+            for _, obj in pairs(LocalPlayer:GetDescendants()) do
+                if obj:IsA("StringValue") and string.match(string.lower(obj.Name), "title") then
+                    AddedTitles[obj.Value] = true
+                end
             end
-        end
-    end
-
-    for _, obj in pairs(LocalPlayer:GetDescendants()) do
-        if obj:IsA("StringValue") and string.match(string.lower(obj.Name), "title") then
-            if not found[obj.Value] then
-                found[obj.Value] = true
-                table.insert(list, obj.Value)
+            
+            for i, title in ipairs(SpecificTitles) do
+                if not AddedTitles[title] then
+                    AddedTitles[title] = true
+                    pcall(function() firesignal(TitleRemote.OnClientEvent, title) end)
+                    if i % 5 == 0 then
+                        task.wait(0.05)
+                    end
+                end
             end
         end
     end
     
-    return list
+    SendNotification("Ultimate Unlocker", "Unlocked all Auras, Emotes, & Titles!", 4)
 end
 
 -- نظام ESP الخاص
@@ -1862,7 +1856,7 @@ CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(150, 0, 0), function()
     StopFlingSystem()
 end)
 
--- 3. ESP & Aura & Titles (مع قائمة الإكسسوارات الجديدة)
+-- 3. ESP & Aura & Titles
 CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(val)
     Config.ShowESP = val
 end)
@@ -1874,29 +1868,11 @@ CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(val)
     UpdateAuraState()
 end)
 
--- قائمة الإكسسوارات الجديدة بالتحديد المستمر
 CreateAccessoryList(ESPPage, "Select Accessories to Equip", Config.SelectedAccessories)
 
-CreateButton(ESPPage, "⚡ GET ALL AURAS & EMOTES ⚡", Color3.fromHex("#A020F0"), function()
-    UnlockAllCosmetics()
-end)
-
-local TitleSelector = CreateDynamicDropdown(ESPPage, "Select Title", ScanForTitles(), Config.SelectedTitle, function(val)
-    Config.SelectedTitle = val
-    local RemotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
-    if RemotesFolder and RemotesFolder:FindFirstChild("UpdateTitle") then
-        pcall(function()
-            RemotesFolder.UpdateTitle:FireServer(val)
-            SendNotification("Title Manager", "Title '" .. val .. "' activated!", 2)
-        end)
-    else
-        SendNotification("Title Manager", "Remote 'UpdateTitle' not found.", 2)
-    end
-end)
-
-CreateButton(ESPPage, "↻ Scan & Refresh Titles", nil, function()
-    TitleSelector.Refresh(ScanForTitles())
-    SendNotification("System", "Titles refreshed successfully!", 3)
+-- الزر الموحد الأسطوري الجديد 
+CreateButton(ESPPage, "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", Color3.fromHex("#A020F0"), function()
+    UnlockAllCosmeticsAndTitles()
 end)
 
 -- 4. Graphic
@@ -2031,7 +2007,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    -- إضافة تحديث الألوان لقائمة الإكسسوارات ليظل مضيئاً عند التحديد
     for _, item in pairs(ThemedAccessoryListBtns) do
         if item.Btn and item.Btn.Parent then
             if item.Table[item.Name] then
