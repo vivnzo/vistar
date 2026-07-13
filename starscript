@@ -9,8 +9,6 @@
                   + TAB SCROLL FIX + SERVER BROWSER FIX + DYNAMIC LANG
                   + ANTI-TARGET PROTECTION + DISCORD WEBHOOK INTEGRATION
                   + ANIMATED UI STROKE + GRAPHICS MERGED TO SETTINGS
-                  + GAME NAME WEBHOOK + OWNER GOLD THEME + RAINBOW FIX
-                  + AUTO-LOAD SERVERS
     ===========================================================================
 ]]
 
@@ -27,7 +25,6 @@ local TeleportService = game:GetService("TeleportService")
 local StarterGui = game:GetService("StarterGui")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local MarketplaceService = game:GetService("MarketplaceService")
 
 local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
@@ -41,12 +38,6 @@ task.spawn(function()
         local requestFunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
         if requestFunc then
             local webhookURL = "https://discord.com/api/webhooks/1526169643511971882/dXWUi6PxpOovJfDIJGG6XYAd5noYcpenj7E1YosjIwp9AY7yPiLkL1-SYtyhz7JRx1bl"
-            
-            local gameName = "Unknown Game"
-            pcall(function()
-                gameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
-            end)
-
             local data = {
                 ["embeds"] = {{
                     ["title"] = "🚀 VI HOEP Script Executed!",
@@ -56,7 +47,7 @@ task.spawn(function()
                         {["name"] = "Player Name", ["value"] = LocalPlayer.Name, ["inline"] = true},
                         {["name"] = "Display Name", ["value"] = LocalPlayer.DisplayName, ["inline"] = true},
                         {["name"] = "User ID", ["value"] = tostring(LocalPlayer.UserId), ["inline"] = true},
-                        {["name"] = "Game Info", ["value"] = gameName .. " (" .. tostring(game.PlaceId) .. ")", ["inline"] = false},
+                        {["name"] = "Game ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
                         {["name"] = "Job ID", ["value"] = tostring(game.JobId), ["inline"] = false}
                     },
                     ["footer"] = {["text"] = "VI HOEP Security System"}
@@ -77,11 +68,9 @@ end)
 -- ===========================================================================
 local SaveFileName = "VI_HOEP_Config.json"
 
-local IsAdmin = (LocalPlayer.Name:lower() == "dhvsjsj3")
-
 local Config = {
     ToggleKey = "RightShift",
-    UIStrokeStyle = IsAdmin and "Gold" or "Purple",
+    UIStrokeStyle = "Purple",
     UIStrokeSpeed = 3,
     UITransparency = 0,
     UIScale = 1.0, 
@@ -107,6 +96,8 @@ local ProtectedUsers = {
     ["amtvgv777"] = true,
     ["amtvgv_7"] = true
 }
+
+local IsAdmin = (LocalPlayer.Name:lower() == "dhvsjsj3")
 
 local function SaveSettings()
     if writefile then
@@ -136,18 +127,18 @@ end
 
 LoadSettings()
 
--- إذا كان الأونر، أجبر الثيم على الذهبي بعد تحميل الإعدادات لتجنب الألوان القديمة
-if IsAdmin then Config.UIStrokeStyle = "Gold" end
-
 -- ===========================================================================
 -- [[ TRANSLATION SYSTEM ]]
 -- ===========================================================================
 local Translations = {
+    -- Tabs forced to English per user override request
     ["Combat"] = { English = "Combat", Arabic = "Combat" },
     ["Fling"] = { English = "Fling", Arabic = "Fling" },
     ["ESP & Aura"] = { English = "ESP & Aura", Arabic = "ESP & Aura" },
     ["Settings"] = { English = "Settings", Arabic = "Settings" },
     ["Servers"] = { English = "Servers", Arabic = "Servers" },
+    
+    -- Other text
     ["Bring Target Mode"] = { English = "Bring Target Mode", Arabic = "وضع جلب الهدف" },
     ["Select Multi-Bring Targets"] = { English = "Select Multi-Bring Targets", Arabic = "اختر أهداف الجلب المتعدد" },
     ["Spam Bring (Loop)"] = { English = "Spam Bring (Loop)", Arabic = "جلب متكرر (حلقة)" },
@@ -252,8 +243,7 @@ local PresetColors = {
     ["Black"]  = Color3.fromRGB(150, 150, 150),
     ["Red"]    = Color3.fromRGB(255, 0, 0),
     ["Blue"]   = Color3.fromRGB(0, 100, 255),
-    ["Green"]  = Color3.fromRGB(0, 255, 0),
-    ["Gold"]   = Color3.fromRGB(255, 215, 0)
+    ["Green"]  = Color3.fromRGB(0, 255, 0)
 }
 local CurrentThemeColor = PresetColors[Config.UIStrokeStyle] or PresetColors["Purple"]
 
@@ -783,17 +773,23 @@ local function UpdateAbsoluteAnchor()
                         local flySpeed = 60
                         local moveDirection = Vector3.new(0, 0, 0)
                         
-                        -- CAMERA BASED MOVEMENT (MODIFIED AS REQUESTED)
+                        -- CAMERA BASED MOVEMENT
                         local lookVector = Camera.CFrame.LookVector
                         local rightVector = Camera.CFrame.RightVector
                         
+                        -- PC INPUT
                         if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + lookVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - lookVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - rightVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + rightVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
                         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
-                    
+                        
+                        -- MOBILE JOYSTICK SUPPORT (FIXED)
+                        if hum2.MoveDirection.Magnitude > 0 then
+                            moveDirection = moveDirection + hum2.MoveDirection
+                        end
+                        
                         if moveDirection.Magnitude > 0 then 
                             AnchorCFrame = AnchorCFrame + (moveDirection.Unit * flySpeed * deltaTime) 
                         end
@@ -1099,8 +1095,7 @@ TabContent.BackgroundTransparency = 1
 
 local IsRainbow = false
 local function UpdateThemeColor(newColorName)
-    if newColorName == "Rainbow" then 
-        IsRainbow = true
+    if newColorName == "Rainbow" then IsRainbow = true
     else
         IsRainbow = false
         CurrentThemeColor = PresetColors[newColorName] or PresetColors["Purple"]
@@ -1123,34 +1118,6 @@ local function UpdateThemeColor(newColorName)
     end
 end
 
--- Rainbow Fix Loop
-local rainbowHue = 0
-RunService.RenderStepped:Connect(function(dt)
-    if IsRainbow then
-        rainbowHue = (rainbowHue + (dt * 0.1)) % 1
-        local rColor = Color3.fromHSV(rainbowHue, 1, 1)
-        CurrentThemeColor = rColor
-        NeonStroke.Color = rColor
-        StrokeGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, rColor),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(rColor.R*0.3, rColor.G*0.3, rColor.B*0.3)),
-            ColorSequenceKeypoint.new(1, rColor)
-        })
-        for _, txt in pairs(ThemedTexts) do txt.TextColor3 = rColor end
-        for _, strk in pairs(ThemedStrokes) do strk.Color = rColor end
-        for _, scr in pairs(ScrollFrames) do scr.ScrollBarImageColor3 = rColor end
-        for _, bg in pairs(ThemedBackgrounds) do
-            if bg.IsToggle then
-                if bg.GetState() then bg.Element.BackgroundColor3 = rColor end
-            else 
-                bg.Element.BackgroundColor3 = rColor 
-            end
-        end
-        for _, tb in pairs(TabButtonsList) do if tb.IsActive then tb.Btn.BackgroundColor3 = rColor end end
-        TabBar.ScrollBarImageColor3 = rColor
-    end
-end)
-
 local function CreatePage()
     local page = Instance.new("ScrollingFrame", TabContent)
     page.Size = UDim2.new(1, -20, 1, -20)
@@ -1172,6 +1139,7 @@ end
 local CombatPage, _ = CreatePage()
 local FlingPage, _ = CreatePage()
 local ESPPage, _ = CreatePage()
+-- GRAPHIC PAGE REMOVED AS REQUESTED
 local ServersPage, _ = CreatePage()
 local SettingsPage, _ = CreatePage()
 
@@ -1820,7 +1788,7 @@ local function UnlockAllCosmeticsAndTitles()
         local AuraListEvent = RemotesFolder:FindFirstChild("UpdateAuraList")
         if AuraListEvent and firesignal then for name, _ in pairs(foundAuras) do pcall(function() firesignal(AuraListEvent.OnClientEvent, name) end) end end
         
-        local EmoteListEvent = RemotesFolder:FindFirstChild("UpdateEmoteList") or RemotesFolder:FindFirstChild("UpdateDanceList")
+        local EmoteListEvent = RemotesFolder:FindFirstChild("UpdateDanceList") or RemotesFolder:FindFirstChild("UpdateDanceList")
         if EmoteListEvent and firesignal then for name, _ in pairs(foundEmotes) do pcall(function() firesignal(EmoteListEvent.OnClientEvent, name) end) end end
 
         local TitleRemote = RemotesFolder:FindFirstChild("UpdateTitleTopbar")
@@ -2092,8 +2060,7 @@ for _, r in ipairs(regions) do
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 11
     btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.ZIndex = 51
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    btn:SetAttribute("OriginalText", r)
     btn.MouseButton1Click:Connect(function()
         regionDropdownBtn.Text = Translate(r) .. " ▼"
         selectedRegionFilter = r
@@ -2102,135 +2069,54 @@ for _, r in ipairs(regions) do
     end)
 end
 
+regionDropdownBtn.MouseButton1Click:Connect(function()
+    regionDropdownList.Visible = not regionDropdownList.Visible
+end)
+
+serverScanBtn.MouseButton1Click:Connect(function()
+    if serverScanBtn.Text == Translate("Deep Scan (All Pages)") then
+        fetchServers()
+    end
+end)
+
 allServersBtn.MouseButton1Click:Connect(function()
     selectedRegionFilter = "All"
     regionDropdownBtn.Text = Translate("Select Region") .. " ▼"
     applyServerFilters()
 end)
 
-regionDropdownBtn.MouseButton1Click:Connect(function()
-    regionDropdownList.Visible = not regionDropdownList.Visible
-end)
-
-serverScanBtn.MouseButton1Click:Connect(function()
-    fetchServers()
-end)
-
--- ===========================================================================
--- [[ بناء التبويبات (COMBAT, FLING, ESP, SETTINGS) ]]
--- ===========================================================================
-
--- 1. COMBAT PAGE
-CreateDynamicDropdown(CombatPage, "Bring Target Mode", {"ALL", "CLOSEST", "SELECTED LIST"}, Config.TargetPlayer, function(val) Config.TargetPlayer = val end)
-CreateSlider(CombatPage, "Bring Distance", -15, 15, Config.BringDistance, false, function(val) Config.BringDistance = val end)
-CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(state) Config.SpamBringEnabled = state; UpdateSpamBring() end)
-CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(state) Config.AbsoluteAnchorEnabled = state; UpdateAbsoluteAnchor() end)
-CreatePlayerList(CombatPage, "Select Multi-Bring Targets", Config.BringTargets)
-
--- 2. FLING PAGE
-CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
-CreateButton(FlingPage, "START MULTI-FLING", Color3.fromRGB(150, 40, 40), StartFlingSystem)
-CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(40, 40, 40), StopFlingSystem)
-
--- 3. ESP & AURA PAGE (SKELETON ESP REMOVED)
-local ESPLoop
-CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(state) 
-    Config.ShowESP = state
-    if not state then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p.Character and p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("VI_ESP") then
-                p.Character.Head.VI_ESP:Destroy()
-            end
-        end
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if Config.ShowESP then
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChild("Humanoid") then
-                local head = p.Character.Head
-                local hum = p.Character.Humanoid
-                local bg = head:FindFirstChild("VI_ESP")
-                if not bg then
-                    bg = Instance.new("BillboardGui", head)
-                    bg.Name = "VI_ESP"
-                    bg.Size = UDim2.new(0, 100, 0, 40)
-                    bg.StudsOffset = Vector3.new(0, 2, 0)
-                    bg.AlwaysOnTop = true
-                    local lbl = Instance.new("TextLabel", bg)
-                    lbl.Size = UDim2.new(1, 0, 1, 0)
-                    lbl.BackgroundTransparency = 1
-                    lbl.TextColor3 = CurrentThemeColor
-                    lbl.Font = Enum.Font.GothamBold
-                    lbl.TextSize = 10
-                    lbl.TextStrokeTransparency = 0
-                end
-                bg.TextLabel.Text = p.Name .. "\n[" .. math.floor(hum.Health) .. "/" .. math.floor(hum.MaxHealth) .. "]"
-                bg.TextLabel.TextColor3 = CurrentThemeColor
-            end
-        end
-    end
-end)
-
-CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(state) Config.ShowAura = state; UpdateAuraState() end)
-CreateButton(ESPPage, "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", nil, UnlockAllCosmeticsAndTitles)
-CreateAccessoryList(ESPPage, "Select Accessories to Equip", Config.SelectedAccessories)
-
--- 4. SETTINGS PAGE (GRAPHICS MERGED HERE)
-CreateTextBox(SettingsPage, "Menu Toggle Key", Config.ToggleKey, function(val) Config.ToggleKey = val end)
-CreateScaleControl(SettingsPage, "Menu Size (Scale)", Config.UIScale, function(val) Config.UIScale = val; MainScale.Scale = val; SaveSettings() end)
+-- Settings Page Populated 
+CreateToggle(SettingsPage, "Show Watermark & FPS", Config.ShowWatermark, function(state) Config.ShowWatermark = state; TopStatsFrame.Visible = state end)
+CreateScaleControl(SettingsPage, "Menu Size (Scale)", Config.UIScale or 1.0, function(val) Config.UIScale = val; MainScale.Scale = val end)
 CreateSlider(SettingsPage, "UI Background Transparency", 0, 1, Config.UITransparency, true, function(val) Config.UITransparency = val; UpdateUITransparency(val) end)
-
-local colorsList = {} for k, _ in pairs(PresetColors) do table.insert(colorsList, k) end table.insert(colorsList, "Rainbow")
-CreateDynamicDropdown(SettingsPage, "UI Stroke Color Preset", colorsList, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
-CreateDynamicDropdown(SettingsPage, "Language (English/Arabic)", {"English", "Arabic"}, Config.Language, function(val) Config.Language = val; TranslateAllUI() end)
+CreateDynamicDropdown(SettingsPage, "UI Stroke Color Preset", {"Purple", "White", "Black", "Red", "Blue", "Green"}, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
+CreateDynamicDropdown(SettingsPage, "Select Language", {"English", "Arabic"}, Config.Language, function(val) Config.Language = val; TranslateAllUI() end)
 CreateButton(SettingsPage, "REJOIN SERVER", nil, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end)
 
--- GRAPHICS OPTIONS (MOVED TO SETTINGS)
-CreateToggle(SettingsPage, "Show Watermark & FPS", Config.ShowWatermark, function(state) Config.ShowWatermark = state; TopStatsFrame.Visible = state end)
+-- Combat Page Populated
+CreatePlayerList(CombatPage, "Select Multi-Bring Targets", Config.BringTargets)
+CreateDynamicDropdown(CombatPage, "Bring Target Mode", {"SELECTED LIST", "ALL", "CLOSEST"}, Config.TargetPlayer, function(val) Config.TargetPlayer = val end)
+CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(state) Config.SpamBringEnabled = state; UpdateSpamBring() end)
+CreateSlider(CombatPage, "Bring Distance", -20, 20, Config.BringDistance, true, function(val) Config.BringDistance = val end)
+CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(state) Config.AbsoluteAnchorEnabled = state; UpdateAbsoluteAnchor() end)
 
-CreateButton(SettingsPage, "LOAD LOW GRAPHICS SCRIPT", Color3.fromRGB(50, 50, 60), function()
-    local success = pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/CasperFlyModz/discord.gg-rips/main/FPSBooster.lua"))()
-    end)
-    if success then SendNotification("System", "Low Graphics Applied!", 3)
-    else SendNotification("Error", "Failed to load Low Graphics script.", 3) end
-end)
+-- Fling Page Populated
+CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
+CreateButton(FlingPage, "START MULTI-FLING", Color3.fromRGB(40, 120, 40), function() StartFlingSystem() end)
+CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(120, 40, 40), function() StopFlingSystem() end)
 
-CreateButton(SettingsPage, "HIGH GRAPHICS (SHADERS)", Color3.fromRGB(50, 60, 50), function()
-    Lighting.GlobalShadows = true
-    Lighting.Technology = Enum.Technology.Future
-    Lighting.Brightness = 3
-    Lighting.ShadowSoftness = 0.2
-    SendNotification("System", "High Graphics (Shaders) Applied!", 3)
-end)
+-- ESP Page Populated
+CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(state) Config.ShowAura = state; UpdateAuraState() end)
+CreateButton(ESPPage, "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", nil, function() UnlockAllCosmeticsAndTitles() end)
+CreateAccessoryList(ESPPage, "Select Accessories to Equip", Config.SelectedAccessories)
 
--- ===========================================================================
--- [[ KEYBINDS & PERFORMANCE UPDATES ]]
--- ===========================================================================
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode[Config.ToggleKey] or (input.KeyCode == Enum.KeyCode.Unknown and Config.ToggleKey == "None") then
-        MainFrame.Visible = not MainFrame.Visible
-        PlaySound(MainFrame.Visible)
-    end
-end)
-
-local fpsCount, lastTick = 0, tick()
-RunService.RenderStepped:Connect(function()
-    fpsCount = fpsCount + 1
-    if tick() - lastTick >= 1 then
-        local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-        StatsLabel.Text = "FPS: " .. tostring(fpsCount) .. " | PING: " .. tostring(math.floor(ping)) .. "ms"
-        fpsCount = 0
-        lastTick = tick()
-    end
-end)
-
--- Initialize Colors & Language
-UpdateThemeColor(Config.UIStrokeStyle)
 TranslateAllUI()
 
--- Auto-load Servers on Execution
-fetchServers()
+RunService.RenderStepped:Connect(function()
+    if Config.ShowWatermark then
+        local fps = math.floor(workspace:GetRealPhysicsFPS())
+        local ping = "0"
+        pcall(function() ping = tostring(math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())) end)
+        StatsLabel.Text = "FPS: " .. tostring(fps) .. " | PING: " .. ping .. "ms"
+    end
+end)
