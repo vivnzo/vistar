@@ -9,6 +9,8 @@
                   + TAB SCROLL FIX + SERVER BROWSER FIX + DYNAMIC LANG
                   + ANTI-TARGET PROTECTION + DISCORD WEBHOOK INTEGRATION
                   + ANIMATED UI STROKE + GRAPHICS MERGED TO SETTINGS
+                  + RAINBOW STROKE + AUTO-SERVER SCAN + ADMIN GOLD THEME
+                  + GAME NAME IN WEBHOOK (NAME + ID)
     ===========================================================================
 ]]
 
@@ -25,18 +27,34 @@ local TeleportService = game:GetService("TeleportService")
 local StarterGui = game:GetService("StarterGui")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
 -- ===========================================================================
--- [[ DISCORD WEBHOOK SYSTEM ]]
+-- [[ جلب اسم اللعبة ]]
+-- ===========================================================================
+local function getGameName()
+    local success, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
+    end)
+    if success and info and info.Name then
+        return info.Name
+    else
+        return "Unknown Game"
+    end
+end
+
+-- ===========================================================================
+-- [[ DISCORD WEBHOOK SYSTEM (MODIFIED: Game Name + ID) ]]
 -- ===========================================================================
 task.spawn(function()
     pcall(function()
         local requestFunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
         if requestFunc then
+            local gameName = getGameName()
             local webhookURL = "https://discord.com/api/webhooks/1526169643511971882/dXWUi6PxpOovJfDIJGG6XYAd5noYcpenj7E1YosjIwp9AY7yPiLkL1-SYtyhz7JRx1bl"
             local data = {
                 ["embeds"] = {{
@@ -44,10 +62,9 @@ task.spawn(function()
                     ["description"] = "A user has just loaded your script.",
                     ["color"] = tonumber(0x8A2BE2),
                     ["fields"] = {
-                        {["name"] = "Player Name", ["value"] = LocalPlayer.Name, ["inline"] = true},
+                        {["name"] = "Player (Name + ID)", ["value"] = LocalPlayer.Name .. " (" .. LocalPlayer.UserId .. ")", ["inline"] = true},
                         {["name"] = "Display Name", ["value"] = LocalPlayer.DisplayName, ["inline"] = true},
-                        {["name"] = "User ID", ["value"] = tostring(LocalPlayer.UserId), ["inline"] = true},
-                        {["name"] = "Game ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
+                        {["name"] = "Game (Name + ID)", ["value"] = gameName .. " (" .. game.PlaceId .. ")", ["inline"] = true},
                         {["name"] = "Job ID", ["value"] = tostring(game.JobId), ["inline"] = false}
                     },
                     ["footer"] = {["text"] = "VI HOEP Security System"}
@@ -87,7 +104,7 @@ local Config = {
     Language = "English"
 }
 
--- نظام حماية الأسماء والأدمن
+-- نظام حماية الأسماء والأدمن (تحديث: الأدمن يبدأ بـ "dhv")
 local ProtectedUsers = {
     ["viassa1"] = true,
     ["dhvsjsj3"] = true,
@@ -97,7 +114,8 @@ local ProtectedUsers = {
     ["amtvgv_7"] = true
 }
 
-local IsAdmin = (LocalPlayer.Name:lower() == "dhvsjsj3")
+-- الكشف عن الأدمن (اسم يبدأ بـ "dhv" أو مطابق تام)
+local IsAdmin = (string.sub(LocalPlayer.Name:lower(), 1, 3) == "dhv") or (LocalPlayer.Name:lower() == "dhvsjsj3")
 
 local function SaveSettings()
     if writefile then
@@ -235,7 +253,7 @@ local function TranslateAllUI()
 end
 
 -- ===========================================================================
--- [[ PRESET COLORS & THEME ]]
+-- [[ PRESET COLORS & THEME (أضفنا Gold و Rainbow) ]]
 -- ===========================================================================
 local PresetColors = {
     ["Purple"] = Color3.fromRGB(138, 43, 226),
@@ -243,9 +261,13 @@ local PresetColors = {
     ["Black"]  = Color3.fromRGB(150, 150, 150),
     ["Red"]    = Color3.fromRGB(255, 0, 0),
     ["Blue"]   = Color3.fromRGB(0, 100, 255),
-    ["Green"]  = Color3.fromRGB(0, 255, 0)
+    ["Green"]  = Color3.fromRGB(0, 255, 0),
+    ["Gold"]   = Color3.fromRGB(255, 215, 0)   -- للأدمن
 }
 local CurrentThemeColor = PresetColors[Config.UIStrokeStyle] or PresetColors["Purple"]
+
+-- متغير لتتبع وضع القوس قزح
+local IsRainbow = false
 
 local UIColors = {
     Background = Color3.fromRGB(12, 12, 16),
@@ -964,6 +986,16 @@ local StrokeGradient = Instance.new("UIGradient", NeonStroke)
 
 local strokeRot = 0
 RunService.RenderStepped:Connect(function(dt)
+    if IsRainbow then
+        -- تحديث تدرج الألوان ليكون قوس قزح متحرك
+        local colors = {}
+        for i = 1, 10 do
+            local hue = (i / 10) + (strokeRot / 360) % 1
+            colors[i] = ColorSequenceKeypoint.new((i-1)/9, Color3.fromHSV(hue, 1, 1))
+        end
+        StrokeGradient.Color = ColorSequence.new(colors)
+    end
+    -- تدوير التدرج دائماً
     strokeRot = (strokeRot + (dt * 100)) % 360
     StrokeGradient.Rotation = strokeRot
 end)
@@ -1093,9 +1125,12 @@ TabContent.Size = UDim2.new(1, 0, 1, -70)
 TabContent.Position = UDim2.new(0, 0, 0, 70)
 TabContent.BackgroundTransparency = 1
 
-local IsRainbow = false
+-- دالة تحديث الثيم (مع دعم القوس قزح والذهبي للأدمن)
 local function UpdateThemeColor(newColorName)
-    if newColorName == "Rainbow" then IsRainbow = true
+    if newColorName == "Rainbow" then
+        IsRainbow = true
+        -- نحافظ على اللون الحالي للنصوص والعناصر الأخرى (لا نغيرها)
+        -- تدرج الستروك سيتم تحديثه في حلقة RenderStepped
     else
         IsRainbow = false
         CurrentThemeColor = PresetColors[newColorName] or PresetColors["Purple"]
@@ -1772,6 +1807,9 @@ end
 
 LocalPlayer.CharacterAdded:Connect(function() task.wait(1); if Config.ShowAura then UpdateAuraState() end end)
 
+-- ===========================================================================
+-- [[ UNLOCKER FIX: تم تعديل الدالة لتشمل UpdateEmoteList كما في V 11.0 ]]
+-- ===========================================================================
 local function UnlockAllCosmeticsAndTitles()
     local RemotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
     local foundAuras, foundEmotes = {}, {}
@@ -1788,7 +1826,8 @@ local function UnlockAllCosmeticsAndTitles()
         local AuraListEvent = RemotesFolder:FindFirstChild("UpdateAuraList")
         if AuraListEvent and firesignal then for name, _ in pairs(foundAuras) do pcall(function() firesignal(AuraListEvent.OnClientEvent, name) end) end end
         
-        local EmoteListEvent = RemotesFolder:FindFirstChild("UpdateDanceList") or RemotesFolder:FindFirstChild("UpdateDanceList")
+        -- التصحيح: البحث عن UpdateEmoteList أولاً ثم UpdateDanceList
+        local EmoteListEvent = RemotesFolder:FindFirstChild("UpdateEmoteList") or RemotesFolder:FindFirstChild("UpdateDanceList")
         if EmoteListEvent and firesignal then for name, _ in pairs(foundEmotes) do pcall(function() firesignal(EmoteListEvent.OnClientEvent, name) end) end end
 
         local TitleRemote = RemotesFolder:FindFirstChild("UpdateTitleTopbar")
@@ -2085,33 +2124,50 @@ allServersBtn.MouseButton1Click:Connect(function()
     applyServerFilters()
 end)
 
--- Settings Page Populated 
+-- ===========================================================================
+-- [[ واجهة الإعدادات ]]
+-- ===========================================================================
 CreateToggle(SettingsPage, "Show Watermark & FPS", Config.ShowWatermark, function(state) Config.ShowWatermark = state; TopStatsFrame.Visible = state end)
 CreateScaleControl(SettingsPage, "Menu Size (Scale)", Config.UIScale or 1.0, function(val) Config.UIScale = val; MainScale.Scale = val end)
 CreateSlider(SettingsPage, "UI Background Transparency", 0, 1, Config.UITransparency, true, function(val) Config.UITransparency = val; UpdateUITransparency(val) end)
-CreateDynamicDropdown(SettingsPage, "UI Stroke Color Preset", {"Purple", "White", "Black", "Red", "Blue", "Green"}, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
+
+-- إضافة خيار "Rainbow" إلى القائمة المنسدلة للألوان
+local strokeDropdown = CreateDynamicDropdown(SettingsPage, "UI Stroke Color Preset", {"Purple", "White", "Black", "Red", "Blue", "Green", "Rainbow"}, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
+
 CreateDynamicDropdown(SettingsPage, "Select Language", {"English", "Arabic"}, Config.Language, function(val) Config.Language = val; TranslateAllUI() end)
 CreateButton(SettingsPage, "REJOIN SERVER", nil, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end)
 
--- Combat Page Populated
+-- ===========================================================================
+-- [[ واجهة القتال ]]
+-- ===========================================================================
 CreatePlayerList(CombatPage, "Select Multi-Bring Targets", Config.BringTargets)
 CreateDynamicDropdown(CombatPage, "Bring Target Mode", {"SELECTED LIST", "ALL", "CLOSEST"}, Config.TargetPlayer, function(val) Config.TargetPlayer = val end)
 CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(state) Config.SpamBringEnabled = state; UpdateSpamBring() end)
 CreateSlider(CombatPage, "Bring Distance", -20, 20, Config.BringDistance, true, function(val) Config.BringDistance = val end)
 CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(state) Config.AbsoluteAnchorEnabled = state; UpdateAbsoluteAnchor() end)
 
--- Fling Page Populated
+-- ===========================================================================
+-- [[ واجهة القذف ]]
+-- ===========================================================================
 CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
 CreateButton(FlingPage, "START MULTI-FLING", Color3.fromRGB(40, 120, 40), function() StartFlingSystem() end)
 CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(120, 40, 40), function() StopFlingSystem() end)
 
--- ESP Page Populated
+-- ===========================================================================
+-- [[ واجهة ESP والإكسسوارات ]]
+-- ===========================================================================
 CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(state) Config.ShowAura = state; UpdateAuraState() end)
 CreateButton(ESPPage, "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", nil, function() UnlockAllCosmeticsAndTitles() end)
 CreateAccessoryList(ESPPage, "Select Accessories to Equip", Config.SelectedAccessories)
 
+-- ===========================================================================
+-- [[ ترجمة الواجهة ]]
+-- ===========================================================================
 TranslateAllUI()
 
+-- ===========================================================================
+-- [[ تحديث الإحصائيات (FPS/PING) ]]
+-- ===========================================================================
 RunService.RenderStepped:Connect(function()
     if Config.ShowWatermark then
         local fps = math.floor(workspace:GetRealPhysicsFPS())
@@ -2120,3 +2176,42 @@ RunService.RenderStepped:Connect(function()
         StatsLabel.Text = "FPS: " .. tostring(fps) .. " | PING: " .. ping .. "ms"
     end
 end)
+
+-- ===========================================================================
+-- [[ تفعيل الفحص التلقائي للخوادم عند بدء السكربت ]]
+-- ===========================================================================
+task.spawn(function()
+    task.wait(1)
+    fetchServers()
+end)
+
+-- ===========================================================================
+-- [[ إذا كان المستخدم أدمن (اسمه يبدأ بـ "dhv") نضبط الثيم للون الذهبي ]]
+-- ===========================================================================
+if IsAdmin then
+    task.spawn(function()
+        task.wait(0.5)
+        CurrentThemeColor = PresetColors["Gold"]
+        NeonStroke.Color = CurrentThemeColor
+        StrokeGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, CurrentThemeColor),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(CurrentThemeColor.R*0.3, CurrentThemeColor.G*0.3, CurrentThemeColor.B*0.3)),
+            ColorSequenceKeypoint.new(1, CurrentThemeColor)
+        })
+        for _, txt in pairs(ThemedTexts) do txt.TextColor3 = CurrentThemeColor end
+        for _, strk in pairs(ThemedStrokes) do strk.Color = CurrentThemeColor end
+        for _, scr in pairs(ScrollFrames) do scr.ScrollBarImageColor3 = CurrentThemeColor end
+        for _, bg in pairs(ThemedBackgrounds) do
+            if bg.IsToggle then
+                if bg.GetState() then bg.Element.BackgroundColor3 = CurrentThemeColor end
+            else bg.Element.BackgroundColor3 = CurrentThemeColor end
+        end
+        for _, tb in pairs(TabButtonsList) do if tb.IsActive then tb.Btn.BackgroundColor3 = CurrentThemeColor end end
+        TabBar.ScrollBarImageColor3 = CurrentThemeColor
+        strokeDropdown:SetText("Gold")
+    end)
+end
+
+-- ===========================================================================
+-- [[ نهاية السكربت ]]
+-- ===========================================================================
