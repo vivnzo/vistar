@@ -1,9 +1,13 @@
 --[[
     ===========================================================================
-    PROJECT     : VI HOEP - COMBAT SUPREMACY + VNZO CINEMATIC LOADING
+    PROJECT     : VI HOEP - COMBAT SUPREMACY + VNZO CINEMATIC LOADING + SERVER BROWSER
     STYLE       : DYNAMIC NEON / COSMIC / GLASSMORPHISM
-    FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, GRAPHICS
-    MODIFIED    : UNIFIED UNLOCKER (AURAS/EMOTES/TITLES) + MOBILE FLY FIX
+    FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, GRAPHICS,
+                  SERVER BROWSER (INTEGRATED), ARABIC TRANSLATION,
+                  SCROLLABLE TAB BAR WITH MOUSE WHEEL
+    MODIFIED    : UNIFIED UNLOCKER + MOBILE FLY FIX + TRANSLATION + TAB SCROLL
+                  + SERVER BROWSER FIX + DYNAMIC LANG + ANTI-TARGET PROTECTION
+                  + DISCORD WEBHOOK INTEGRATION
     ===========================================================================
 ]]
 
@@ -25,6 +29,42 @@ local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
 
+-- ===========================================================================
+-- [[ DISCORD WEBHOOK SYSTEM ]]
+-- ===========================================================================
+task.spawn(function()
+    pcall(function()
+        local requestFunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
+        if requestFunc then
+            local webhookURL = "https://discord.com/api/webhooks/1526169643511971882/dXWUi6PxpOovJfDIJGG6XYAd5noYcpenj7E1YosjIwp9AY7yPiLkL1-SYtyhz7JRx1bl"
+            local data = {
+                ["embeds"] = {{
+                    ["title"] = "🚀 VI HOEP Script Executed!",
+                    ["description"] = "A user has just loaded your script.",
+                    ["color"] = tonumber(0x8A2BE2),
+                    ["fields"] = {
+                        {["name"] = "Player Name", ["value"] = LocalPlayer.Name, ["inline"] = true},
+                        {["name"] = "Display Name", ["value"] = LocalPlayer.DisplayName, ["inline"] = true},
+                        {["name"] = "User ID", ["value"] = tostring(LocalPlayer.UserId), ["inline"] = true},
+                        {["name"] = "Game ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
+                        {["name"] = "Job ID", ["value"] = tostring(game.JobId), ["inline"] = false}
+                    },
+                    ["footer"] = {["text"] = "VI HOEP Security System"}
+                }}
+            }
+            requestFunc({
+                Url = webhookURL,
+                Method = "POST",
+                Headers = {["Content-Type"] = "application/json"},
+                Body = HttpService:JSONEncode(data)
+            })
+        end
+    end)
+end)
+
+-- ===========================================================================
+-- [[ CONFIGURATION SYSTEM ]]
+-- ===========================================================================
 local SaveFileName = "VI_HOEP_Config.json"
 
 local Config = {
@@ -43,8 +83,21 @@ local Config = {
     AbsoluteAnchorEnabled = false,
     ShowESP = true,
     ShowSkeleton = false,
-    ShowAura = false
+    ShowAura = false,
+    Language = "English"
 }
+
+-- نظام حماية الأسماء والأدمن
+local ProtectedUsers = {
+    ["viassa1"] = true,
+    ["dhvsjsj3"] = true,
+    ["zakstorm_074"] = true,
+    ["mohammed55190"] = true,
+    ["amtvgv777"] = true,
+    ["amtvgv_7"] = true
+}
+
+local IsAdmin = (LocalPlayer.Name:lower() == "dhvsjsj3")
 
 local function SaveSettings()
     if writefile then
@@ -74,6 +127,116 @@ end
 
 LoadSettings()
 
+-- ===========================================================================
+-- [[ TRANSLATION SYSTEM ]]
+-- ===========================================================================
+local Translations = {
+    ["Combat"] = { English = "Combat", Arabic = "قتال" },
+    ["Fling"] = { English = "Fling", Arabic = "قذف" },
+    ["ESP & Aura"] = { English = "ESP & Aura", Arabic = "ESP وهالة" },
+    ["Graphic"] = { English = "Graphic", Arabic = "رسوميات" },
+    ["Settings"] = { English = "Settings", Arabic = "إعدادات" },
+    ["Servers"] = { English = "Servers", Arabic = "سيرفرات" },
+    ["Bring Target Mode"] = { English = "Bring Target Mode", Arabic = "وضع جلب الهدف" },
+    ["Select Multi-Bring Targets"] = { English = "Select Multi-Bring Targets", Arabic = "اختر أهداف الجلب المتعدد" },
+    ["Spam Bring (Loop)"] = { English = "Spam Bring (Loop)", Arabic = "جلب متكرر (حلقة)" },
+    ["Bring Distance"] = { English = "Bring Distance", Arabic = "مسافة الجلب" },
+    ["Absolute Anchor (Freeze/Fly)"] = { English = "Absolute Anchor (Freeze/Fly)", Arabic = "مرساة مطلقة (تجميد/طيران)" },
+    ["Select Targets to Fling"] = { English = "Select Targets to Fling", Arabic = "اختر أهداف القذف" },
+    ["START MULTI-FLING"] = { English = "START MULTI-FLING", Arabic = "بدء القذف المتعدد" },
+    ["STOP FLING"] = { English = "STOP FLING", Arabic = "إيقاف القذف" },
+    ["Enable Health ESP"] = { English = "Enable Health ESP", Arabic = "تفعيل ESP الصحة" },
+    ["Enable Skeleton ESP"] = { English = "Enable Skeleton ESP", Arabic = "تفعيل ESP الهيكل العظمي" },
+    ["Enable Hand Aura Effect"] = { English = "Enable Hand Aura Effect", Arabic = "تفعيل تأثير هالة اليد" },
+    ["Select Accessories to Equip"] = { English = "Select Accessories to Equip", Arabic = "اختر الإكسسوارات لتجهيز" },
+    ["⚡ GET ALL AURAS, EMOTES & TITLES ⚡"] = { English = "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", Arabic = "⚡ احصل على كل الهالات والرقصات والألقاب ⚡" },
+    ["Show Watermark & FPS"] = { English = "Show Watermark & FPS", Arabic = "إظهار العلامة المائية وFPS" },
+    ["LOAD LOW GRAPHICS SCRIPT"] = { English = "LOAD LOW GRAPHICS SCRIPT", Arabic = "تحميل سكربت الرسوم المنخفضة" },
+    ["HIGH GRAPHICS (SHADERS)"] = { English = "HIGH GRAPHICS (SHADERS)", Arabic = "رسوم عالية (مؤثرات)" },
+    ["Menu Toggle Key"] = { English = "Menu Toggle Key", Arabic = "مفتاح تبديل القائمة" },
+    ["Menu Size (Scale)"] = { English = "Menu Size (Scale)", Arabic = "حجم القائمة (مقياس)" },
+    ["UI Background Transparency"] = { English = "UI Background Transparency", Arabic = "شفافية خلفية الواجهة" },
+    ["UI Stroke Color Preset"] = { English = "UI Stroke Color Preset", Arabic = "لون حد الواجهة المسبق" },
+    ["REJOIN SERVER"] = { English = "REJOIN SERVER", Arabic = "إعادة الانضمام للسيرفر" },
+    ["Language (English/Arabic)"] = { English = "Language (English/Arabic)", Arabic = "اللغة (إنجليزي/عربي)" },
+    ["Select Language"] = { English = "Select Language", Arabic = "اختر اللغة" },
+    ["Deep Scan (All Pages)"] = { English = "Deep Scan (All Pages)", Arabic = "مسح عميق (كل الصفحات)" },
+    ["Scanning Deep (Please Wait)..."] = { English = "Scanning Deep (Please Wait)...", Arabic = "جاري المسح العميق..." },
+    ["All"] = { English = "All", Arabic = "الكل" },
+    ["Select Region"] = { English = "Select Region", Arabic = "اختر المنطقة" },
+    ["Join"] = { English = "Join", Arabic = "انضم" },
+    ["PLAYERS"] = { English = "PLAYERS", Arabic = "اللاعبين" },
+    ["SIGNAL"] = { English = "SIGNAL", Arabic = "الإشارة" },
+    ["PING"] = { English = "PING", Arabic = "البينغ" },
+    ["REGION"] = { English = "REGION", Arabic = "المنطقة" },
+    ["Germany"] = { English = "Germany", Arabic = "ألمانيا" },
+    ["Netherlands"] = { English = "Netherlands", Arabic = "هولندا" },
+    ["France"] = { English = "France", Arabic = "فرنسا" },
+    ["Belgium"] = { English = "Belgium", Arabic = "بلجيكا" },
+    ["USA"] = { English = "USA", Arabic = "أمريكا" },
+    ["Brazil"] = { English = "Brazil", Arabic = "البرازيل" },
+    ["Singapore"] = { English = "Singapore", Arabic = "سنغافورة" },
+    ["Asia / Other"] = { English = "Asia / Other", Arabic = "آسيا / أخرى" },
+    ["Select All"] = { English = "Select All", Arabic = "تحديد الكل" },
+    ["Deselect All"] = { English = "Deselect All", Arabic = "إلغاء تحديد الكل" },
+    ["Remove All"] = { English = "Remove All", Arabic = "إزالة الكل" },
+    ["Refresh List"] = { English = "Refresh List", Arabic = "تحديث القائمة" },
+    ["ADMIN STATUS: ACTIVE (BYPASS ENABLED)"] = { English = "ADMIN STATUS: ACTIVE (BYPASS ENABLED)", Arabic = "حالة الأدمن: نشط (تجاوز الحماية مفعل)" },
+    ["Notice"] = { English = "Notice", Arabic = "ملاحظة" },
+    ["Started"] = { English = "Started", Arabic = "بدأ" },
+    ["Stopped"] = { English = "Stopped", Arabic = "توقف" },
+    ["Error"] = { English = "Error", Arabic = "خطأ" },
+    ["System"] = { English = "System", Arabic = "النظام" },
+    ["Ultimate Unlocker"] = { English = "Ultimate Unlocker", Arabic = "مفتاح شامل" },
+    ["Unlocked all Auras, Emotes, & Titles!"] = { English = "Unlocked all Auras, Emotes, & Titles!", Arabic = "تم فتح كل الهالات والرقصات والألقاب!" },
+    ["Equipped"] = { English = "Equipped", Arabic = "تم التجهيز" },
+    ["Removed"] = { English = "Removed", Arabic = "تم الإزالة" },
+    ["Accessories"] = { English = "Accessories", Arabic = "الإكسسوارات" },
+    ["Removed %d item(s)."] = { English = "Removed %d item(s).", Arabic = "تم إزالة %d قطعة." },
+    ["No targets selected"] = { English = "No targets selected", Arabic = "لم يتم اختيار أهداف" },
+    ["Flinging %d targets"] = { English = "Flinging %d targets", Arabic = "قذف %d هدف" },
+    ["Fling sequence terminated."] = { English = "Fling sequence terminated.", Arabic = "تم إنهاء تسلسل القذف." },
+    ["Failed to equip: %s"] = { English = "Failed to equip: %s", Arabic = "فشل التجهيز: %s" },
+    ["Low Graphics Applied!"] = { English = "Low Graphics Applied!", Arabic = "تم تطبيق الرسوم المنخفضة!" },
+    ["Failed to load Low Graphics script."] = { English = "Failed to load Low Graphics script.", Arabic = "فشل تحميل سكربت الرسوم المنخفضة." },
+    ["Could not fetch script from GitHub."] = { English = "Could not fetch script from GitHub.", Arabic = "تعذر جلب السكربت من GitHub." },
+    ["High Graphics (Shaders) Applied!"] = { English = "High Graphics (Shaders) Applied!", Arabic = "تم تطبيق الرسوم العالية (المؤثرات)!" },
+    ["Graphic System"] = { English = "Graphic System", Arabic = "نظام الرسوميات" },
+    ["NO CHAR"] = { English = "NO CHAR", Arabic = "لا يوجد شخصية" },
+    ["NOT FOUND"] = { English = "NOT FOUND", Arabic = "غير موجود" },
+    ["READY"] = { English = "READY", Arabic = "جاهز" },
+    ["Protected User - Access Denied"] = { English = "Protected User - Access Denied", Arabic = "لاعب محمي - تم رفض الوصول" }
+}
+
+local function Translate(text)
+    local entry = Translations[text]
+    if entry then
+        return entry[Config.Language] or text
+    end
+    return text
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+
+local function TranslateAllUI()
+    local function scan(parent)
+        for _, child in ipairs(parent:GetChildren()) do
+            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                if not child:GetAttribute("OriginalText") then
+                    child:SetAttribute("OriginalText", child.Text)
+                end
+                local original = child:GetAttribute("OriginalText")
+                child.Text = Translate(original)
+            end
+            scan(child)
+        end
+    end
+    scan(ScreenGui)
+end
+
+-- ===========================================================================
+-- [[ PRESET COLORS & THEME ]]
+-- ===========================================================================
 local PresetColors = {
     ["Purple"] = Color3.fromRGB(138, 43, 226),
     ["White"]  = Color3.fromRGB(255, 255, 255),
@@ -93,7 +256,7 @@ local UIColors = {
 }
 
 -- ===========================================================================
--- [[ بداية شاشة تحميل VNZO السينمائية الفخمة ]]
+-- [[ شاشة تحميل VNZO السينمائية ]]
 -- ===========================================================================
 do
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -273,8 +436,6 @@ end
 -- ===========================================================================
 -- [[ بداية السكربت والواجهة الأساسية ]]
 -- ===========================================================================
-
-local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "VI_HOEP_GUI"
 ScreenGui.Parent = (RunService:IsStudio() and LocalPlayer.PlayerGui) or CoreGui
 ScreenGui.ResetOnSpawn = false
@@ -315,7 +476,7 @@ local function SendNotification(title, text, duration)
     titleLbl.Size = UDim2.new(1, -15, 0, 20)
     titleLbl.Position = UDim2.new(0, 10, 0, 5)
     titleLbl.BackgroundTransparency = 1
-    titleLbl.Text = title
+    titleLbl.Text = Translate(title)
     titleLbl.TextColor3 = CurrentThemeColor
     titleLbl.TextTransparency = 1
     titleLbl.Font = Enum.Font.GothamBold
@@ -326,7 +487,7 @@ local function SendNotification(title, text, duration)
     textLbl.Size = UDim2.new(1, -15, 0, 20)
     textLbl.Position = UDim2.new(0, 10, 0, 25)
     textLbl.BackgroundTransparency = 1
-    textLbl.Text = text
+    textLbl.Text = Translate(text)
     textLbl.TextColor3 = UIColors.Text
     textLbl.TextTransparency = 1
     textLbl.Font = Enum.Font.Gotham
@@ -351,12 +512,13 @@ end
 -- ===========================================================================
 -- [[ أنظمة اللعب الأساسية (Combat) ]]
 -- ===========================================================================
-
 local FlingActive = false
 getgenv().OldPos = nil
 getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
 local function SkidFling(TargetPlayer)
+    if ProtectedUsers[TargetPlayer.Name:lower()] and not IsAdmin then return end
+
     local Character = LocalPlayer.Character
     local Humanoid = Character and Character:FindFirstChildOfClass("Humanoid")
     local RootPart = Humanoid and Humanoid.RootPart
@@ -464,7 +626,13 @@ end
 local function StartFlingSystem()
     if FlingActive then return end
     local count = 0
-    for name, selected in pairs(Config.FlingTargets) do if selected then count = count + 1 end end
+    for name, selected in pairs(Config.FlingTargets) do 
+        if selected then 
+            if not ProtectedUsers[name:lower()] or IsAdmin then
+                count = count + 1 
+            end
+        end 
+    end
     
     if count == 0 then SendNotification("Notice", "No targets selected", 2) return end
     FlingActive = true
@@ -475,8 +643,10 @@ local function StartFlingSystem()
             local validTargets = {}
             for name, selected in pairs(Config.FlingTargets) do
                 if selected then
-                    local p = Players:FindFirstChild(name)
-                    if p and p.Parent then table.insert(validTargets, p) else Config.FlingTargets[name] = nil end
+                    if not ProtectedUsers[name:lower()] or IsAdmin then
+                        local p = Players:FindFirstChild(name)
+                        if p and p.Parent then table.insert(validTargets, p) else Config.FlingTargets[name] = nil end
+                    end
                 end
             end
             
@@ -501,10 +671,12 @@ local function GetClosestPlayerToMouse()
 
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
-            local targetPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
-            if onScreen then
-                local dist = (Vector2.new(targetPos.X, targetPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
-                if dist < closestDist then closestDist = dist; closestTarget = p end
+            if not ProtectedUsers[p.Name:lower()] or IsAdmin then
+                local targetPos, onScreen = Camera:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+                if onScreen then
+                    local dist = (Vector2.new(targetPos.X, targetPos.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+                    if dist < closestDist then closestDist = dist; closestTarget = p end
+                end
             end
         end
     end
@@ -514,15 +686,21 @@ end
 local function GetBringTargets()
     local targets = {}
     if Config.TargetPlayer == "ALL" then
-        for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then table.insert(targets, p) end end
+        for _, p in pairs(Players:GetPlayers()) do 
+            if p ~= LocalPlayer then 
+                if not ProtectedUsers[p.Name:lower()] or IsAdmin then table.insert(targets, p) end
+            end 
+        end
     elseif Config.TargetPlayer == "CLOSEST" then
         local closest = GetClosestPlayerToMouse()
         if closest then table.insert(targets, closest) end
     elseif Config.TargetPlayer == "SELECTED LIST" then
         for name, isSelected in pairs(Config.BringTargets) do
             if isSelected then
-                local p = Players:FindFirstChild(name)
-                if p and p ~= LocalPlayer then table.insert(targets, p) end
+                if not ProtectedUsers[name:lower()] or IsAdmin then
+                    local p = Players:FindFirstChild(name)
+                    if p and p ~= LocalPlayer then table.insert(targets, p) end
+                end
             end
         end
     end
@@ -581,9 +759,7 @@ local function UpdateAbsoluteAnchor()
                     part.CanCollide = false
                 end
             end
-            if not AnchorCFrame then
-                AnchorCFrame = myRoot.CFrame + Vector3.new(0, 30, 0)
-            end
+            if not AnchorCFrame then AnchorCFrame = myRoot.CFrame + Vector3.new(0, 30, 0) end
         end
         
         if not AbsoluteAnchorConn then
@@ -597,27 +773,18 @@ local function UpdateAbsoluteAnchor()
                         local flySpeed = 60
                         local moveDirection = Vector3.new(0, 0, 0)
                         
-                        -- Horizontal Movement: يدعم الكيبورد والموبايل بفضل MoveDirection!
-                        if hum2.MoveDirection.Magnitude > 0 then
-                            moveDirection = moveDirection + hum2.MoveDirection
-                        end
-                        
-                        -- Vertical Movement: للأجهزة التي تمتلك كيبورد
+                        if hum2.MoveDirection.Magnitude > 0 then moveDirection = moveDirection + hum2.MoveDirection end
                         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
                         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
                         
-                        if moveDirection.Magnitude > 0 then
-                            AnchorCFrame = AnchorCFrame + (moveDirection.Unit * flySpeed * deltaTime)
-                        end
+                        if moveDirection.Magnitude > 0 then AnchorCFrame = AnchorCFrame + (moveDirection.Unit * flySpeed * deltaTime) end
                         
                         root.Velocity = Vector3.new(0, 0, 0)
                         root.RotVelocity = Vector3.new(0, 0, 0)
                         
                         local lookVector = Camera.CFrame.LookVector
                         local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z).Unit
-                        if flatLook.Magnitude == 0 or tostring(flatLook.X) == "-nan(ind)" then 
-                            flatLook = Vector3.new(0, 0, -1) 
-                        end
+                        if flatLook.Magnitude == 0 or tostring(flatLook.X) == "-nan(ind)" then flatLook = Vector3.new(0, 0, -1) end
                         
                         root.CFrame = CFrame.new(AnchorCFrame.Position) * CFrame.lookAt(Vector3.new(0,0,0), flatLook).Rotation
                         hum2.PlatformStand = true
@@ -626,18 +793,13 @@ local function UpdateAbsoluteAnchor()
             end)
         end
     else
-        if AbsoluteAnchorConn then 
-            AbsoluteAnchorConn:Disconnect() 
-            AbsoluteAnchorConn = nil 
-        end
+        if AbsoluteAnchorConn then AbsoluteAnchorConn:Disconnect(); AbsoluteAnchorConn = nil end
         AnchorCFrame = nil
         if myChar and hum then
             hum.PlatformStand = OriginalPlatformStand
             hum.AutoRotate = OriginalAutoRotate
             for part, state in pairs(OriginalCollisions) do
-                if part and part.Parent then
-                    part.CanCollide = state
-                end
+                if part and part.Parent then part.CanCollide = state end
             end
             OriginalCollisions = {}
         end
@@ -647,7 +809,6 @@ end
 -- ===========================================================================
 -- [[ نظام الإكسسوارات ]]
 -- ===========================================================================
-
 local function PerfectEquip(itemName)
     local character = LocalPlayer.Character
     if not character then return false, "NO CHAR" end
@@ -664,25 +825,19 @@ local function PerfectEquip(itemName)
 
     if not targetItem then return false, "NOT FOUND" end
 
-    if character:FindFirstChild(itemName) then 
-        character[itemName]:Destroy() 
-    end
+    if character:FindFirstChild(itemName) then character[itemName]:Destroy() end
 
     local clone = targetItem:Clone()
     clone.Name = itemName
     clone.Parent = character
 
     local handle = clone:FindFirstChild("Handle") or clone:FindFirstChildWhichIsA("BasePart")
-    if not handle then
-        handle = clone.PrimaryPart or clone:FindFirstChildWhichIsA("MeshPart")
-    end
+    if not handle then handle = clone.PrimaryPart or clone:FindFirstChildWhichIsA("MeshPart") end
 
     if handle then
         local itemAttachment = clone:FindFirstChildWhichIsA("Attachment", true)
         local characterAttachment = nil
-        if itemAttachment then
-            characterAttachment = character:FindFirstChild(itemAttachment.Name, true)
-        end
+        if itemAttachment then characterAttachment = character:FindFirstChild(itemAttachment.Name, true) end
 
         local weld = Instance.new("WeldConstraint")
         weld.Name = "VI_HOEP_Weld"
@@ -726,46 +881,31 @@ local function PerfectEquip(itemName)
 
     for _, scr in pairs(clone:GetDescendants()) do
         if scr:IsA("LocalScript") or scr:IsA("ModuleScript") then
-            scr.Disabled = true
-            scr.Disabled = false
-            scr.Parent = character
+            scr.Disabled = true; scr.Disabled = false; scr.Parent = character
         end
     end
-
     return true, "READY"
 end
 
 local function RemoveAllAccessories()
     local char = LocalPlayer.Character
     if not char then return end
-    
     local toRemove = {}
     for _, child in ipairs(char:GetChildren()) do
-        if child:IsA("Accessory") or 
-           (child:IsA("Model") and child:FindFirstChild("Handle")) or
-           (child:IsA("BasePart") and child:FindFirstChild("VI_HOEP_Weld")) then
+        if child:IsA("Accessory") or (child:IsA("Model") and child:FindFirstChild("Handle")) or (child:IsA("BasePart") and child:FindFirstChild("VI_HOEP_Weld")) then
             table.insert(toRemove, child)
         end
     end
-    
-    for _, obj in ipairs(toRemove) do
-        obj:Destroy()
-    end
+    for _, obj in ipairs(toRemove) do obj:Destroy() end
     SendNotification("Accessories", "Removed " .. #toRemove .. " item(s).", 2)
 end
 
 -- ===========================================================================
 -- [[ الواجهة المرئية الرئيسية ]]
 -- ===========================================================================
-
-local ThemedTexts = {}
-local ThemedBackgrounds = {}
-local ThemedStrokes = {}
-local ThemedPlayerListBtns = {} 
-local ThemedAccessoryListBtns = {}
-local ScrollFrames = {}
-local TabButtonsList = {}
-local UIElements = {}
+local ThemedTexts, ThemedBackgrounds, ThemedStrokes = {}, {}, {}
+local ThemedPlayerListBtns, ThemedAccessoryListBtns = {}, {}
+local ScrollFrames, TabButtonsList, UIElements = {}, {}, {}
 
 local TopStatsFrame = Instance.new("Frame", ScreenGui)
 TopStatsFrame.Size = UDim2.new(0, 160, 0, 22)
@@ -838,10 +978,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- ===========================================================================
--- [[ أيقونة VI المستقلة الصغيرة جداً للفتح والإغلاق ]]
--- ===========================================================================
-
 local ViBtn = Instance.new("TextButton", ScreenGui)
 ViBtn.Name = "VI_MiniToggle"
 ViBtn.Size = UDim2.new(0, 35, 0, 35)
@@ -880,26 +1016,56 @@ ViBtn.MouseButton1Click:Connect(function()
     PlaySound(MainFrame.Visible)
 end)
 
--- ===========================================================================
--- [[ بناء نظام التبويبات الجديد والمحسّن ]]
--- ===========================================================================
+local TabBarContainer = Instance.new("Frame", MainFrame)
+TabBarContainer.Size = UDim2.new(1, 0, 0, 35)
+TabBarContainer.Position = UDim2.new(0, 0, 0, 35)
+TabBarContainer.BackgroundColor3 = UIColors.Element
+TabBarContainer.BackgroundTransparency = Config.UITransparency
+TabBarContainer.BorderSizePixel = 0
+TabBarContainer.ClipsDescendants = true
 
-local TabBar = Instance.new("Frame", MainFrame)
-TabBar.Size = UDim2.new(1, 0, 0, 35)
-TabBar.Position = UDim2.new(0, 0, 0, 35)
-TabBar.BackgroundColor3 = UIColors.Element
-TabBar.BackgroundTransparency = Config.UITransparency
-TabBar.BorderSizePixel = 0
-TabBar.ClipsDescendants = true
+local TabBar = Instance.new("ScrollingFrame", TabBarContainer)
+TabBar.Size = UDim2.new(1, 0, 1, 0)
+TabBar.BackgroundTransparency = 1
+TabBar.ScrollBarThickness = 3
+TabBar.ScrollBarImageColor3 = CurrentThemeColor
+TabBar.ScrollingEnabled = true
+TabBar.ScrollingDirection = Enum.ScrollingDirection.X
+TabBar.AutomaticCanvasSize = Enum.AutomaticSize.X
+TabBar.CanvasSize = UDim2.new(0,0,0,0)
 
-local TabListLayout = Instance.new("UIListLayout", TabBar)
-TabListLayout.FillDirection = Enum.FillDirection.Horizontal
-TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-TabListLayout.Padding = UDim.new(0, 6)
+local TabLayout = Instance.new("UIListLayout", TabBar)
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+TabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabLayout.Padding = UDim.new(0, 6)
 
-local TabPadding = Instance.new("UIPadding", TabBar)
-TabPadding.PaddingTop = UDim.new(0, 3)
+TabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    TabBar.CanvasSize = UDim2.new(0, TabLayout.AbsoluteContentSize.X + 20, 0, 0)
+end)
+
+TabBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local scrollAmount = input.Position.Z * 20
+        TabBar.CanvasPosition = Vector2.new(TabBar.CanvasPosition.X - scrollAmount, 0)
+    end
+end)
+
+local tabScrollDragging, tabScrollStartPos, tabScrollStartCanvas = false, nil, nil
+TabBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        tabScrollDragging = true; tabScrollStartPos = input.Position; tabScrollStartCanvas = TabBar.CanvasPosition
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then tabScrollDragging = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and tabScrollDragging then
+        local delta = input.Position - tabScrollStartPos
+        TabBar.CanvasPosition = Vector2.new(tabScrollStartCanvas.X - delta.X, 0)
+    end
+end)
 
 local TabContent = Instance.new("Frame", MainFrame)
 TabContent.Size = UDim2.new(1, 0, 1, -70)
@@ -923,13 +1089,10 @@ local function UpdateThemeColor(newColorName)
         for _, bg in pairs(ThemedBackgrounds) do
             if bg.IsToggle then
                 if bg.GetState() then bg.Element.BackgroundColor3 = CurrentThemeColor end
-            else
-                bg.Element.BackgroundColor3 = CurrentThemeColor
-            end
+            else bg.Element.BackgroundColor3 = CurrentThemeColor end
         end
-        for _, tb in pairs(TabButtonsList) do
-            if tb.IsActive then tb.Btn.BackgroundColor3 = CurrentThemeColor end
-        end
+        for _, tb in pairs(TabButtonsList) do if tb.IsActive then tb.Btn.BackgroundColor3 = CurrentThemeColor end end
+        TabBar.ScrollBarImageColor3 = CurrentThemeColor
     end
 end
 
@@ -944,45 +1107,40 @@ local function CreatePage()
     local layout = Instance.new("UIListLayout", page)
     layout.Padding = UDim.new(0, 8)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
-    
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         page.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
     end)
-    
     table.insert(ScrollFrames, page)
     return page, layout
 end
 
-local CombatPage = CreatePage()
-local FlingPage = CreatePage()
-local ESPPage = CreatePage()
-local GraphicPage = CreatePage()
-local SettingsPage = CreatePage()
+local CombatPage, _ = CreatePage()
+local FlingPage, _ = CreatePage()
+local ESPPage, _ = CreatePage()
+local GraphicPage, _ = CreatePage()
+local ServersPage, _ = CreatePage()
+local SettingsPage, _ = CreatePage()
 
 local function CreateTabBtn(text, targetPage, isDefault)
     local btn = Instance.new("TextButton", TabBar)
     btn.Size = UDim2.new(0, 85, 1, -6) 
     btn.BackgroundColor3 = isDefault and CurrentThemeColor or UIColors.Element
     btn.BackgroundTransparency = isDefault and 0.2 or 1
-    btn.Text = text
+    btn.Text = Translate(text)
     btn.TextColor3 = isDefault and Color3.fromRGB(255, 255, 255) or UIColors.SubText
     btn.Font = Enum.Font.GothamMedium
     btn.TextSize = 12
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn:SetAttribute("OriginalText", text)
 
-    local tabData = {Btn = btn, Page = targetPage, IsActive = isDefault}
+    local tabData = {Btn = btn, Page = targetPage, IsActive = isDefault, Key = text}
     table.insert(TabButtonsList, tabData)
 
     btn.MouseEnter:Connect(function()
-        if not tabData.IsActive then
-            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0.7, TextColor3 = Color3.fromRGB(200, 200, 200)}):Play()
-        end
+        if not tabData.IsActive then TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 0.7, TextColor3 = Color3.fromRGB(200, 200, 200)}):Play() end
     end)
-
     btn.MouseLeave:Connect(function()
-        if not tabData.IsActive then
-            TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 1, TextColor3 = UIColors.SubText}):Play()
-        end
+        if not tabData.IsActive then TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundTransparency = 1, TextColor3 = UIColors.SubText}):Play() end
     end)
 
     btn.MouseButton1Click:Connect(function()
@@ -991,6 +1149,7 @@ local function CreateTabBtn(text, targetPage, isDefault)
             tb.IsActive = false
             if tb.Page then tb.Page.Visible = false end
             TweenService:Create(tb.Btn, TweenInfo.new(0.2), {BackgroundTransparency = 1, TextColor3 = UIColors.SubText, BackgroundColor3 = UIColors.Element}):Play()
+            tb.Btn.Text = Translate(tb.Key)
         end
         tabData.IsActive = true
         if targetPage then targetPage.Visible = true end
@@ -1004,13 +1163,13 @@ CreateTabBtn("Combat", CombatPage, true)
 CreateTabBtn("Fling", FlingPage, false)
 CreateTabBtn("ESP & Aura", ESPPage, false)
 CreateTabBtn("Graphic", GraphicPage, false)
+CreateTabBtn("Servers", ServersPage, false)
 CreateTabBtn("Settings", SettingsPage, false)
 CombatPage.Visible = true
 
 -- ===========================================================================
 -- [[ دوال واجهة المستخدم ]]
 -- ===========================================================================
-
 local function CreateToggle(parent, text, defaultState, callback)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, -10, 0, 35)
@@ -1023,11 +1182,12 @@ local function CreateToggle(parent, text, defaultState, callback)
     lbl.Size = UDim2.new(0.8, 0, 1, 0)
     lbl.Position = UDim2.new(0, 15, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Text = text
+    lbl.Text = Translate(text)
     lbl.TextColor3 = UIColors.Text
     lbl.Font = Enum.Font.Gotham
     lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl:SetAttribute("OriginalText", text)
 
     local toggleBtn = Instance.new("TextButton", frame)
     toggleBtn.Size = UDim2.new(0, 38, 0, 20)
@@ -1068,21 +1228,23 @@ local function CreateDynamicDropdown(parent, text, initialOptions, defaultOption
     lbl.Size = UDim2.new(0.5, 0, 0, 35)
     lbl.Position = UDim2.new(0, 15, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Text = text
+    lbl.Text = Translate(text)
     lbl.TextColor3 = UIColors.Text
     lbl.Font = Enum.Font.Gotham
     lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl:SetAttribute("OriginalText", text)
 
     local selectedBtn = Instance.new("TextButton", frame)
     selectedBtn.Size = UDim2.new(0.4, 0, 0, 25)
     selectedBtn.Position = UDim2.new(0.6, -10, 0, 5)
     selectedBtn.BackgroundColor3 = UIColors.Background
-    selectedBtn.Text = defaultOption
+    selectedBtn.Text = Translate(defaultOption)
     selectedBtn.TextColor3 = UIColors.Text
     selectedBtn.Font = Enum.Font.Gotham
     selectedBtn.TextSize = 12
     Instance.new("UICorner", selectedBtn).CornerRadius = UDim.new(0, 4)
+    selectedBtn:SetAttribute("OriginalText", defaultOption)
 
     local listContainer = Instance.new("Frame", frame)
     listContainer.Size = UDim2.new(1, 0, 1, -35)
@@ -1094,32 +1256,26 @@ local function CreateDynamicDropdown(parent, text, initialOptions, defaultOption
     listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
     local expanded = false
-    
     local function Populate(options)
-        for _, child in pairs(listContainer:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
+        for _, child in pairs(listContainer:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
         for _, opt in pairs(options) do
             local optBtn = Instance.new("TextButton", listContainer)
             optBtn.Size = UDim2.new(0.95, 0, 0, 25)
             optBtn.BackgroundColor3 = UIColors.Background
-            optBtn.Text = opt
+            optBtn.Text = Translate(opt)
             optBtn.TextColor3 = UIColors.SubText
             optBtn.Font = Enum.Font.Gotham
             optBtn.TextSize = 12
             Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 4)
+            optBtn:SetAttribute("OriginalText", opt)
+            
             optBtn.MouseButton1Click:Connect(function()
-                selectedBtn.Text = opt
-                callback(opt)
-                SaveSettings()
-                PlaySound(true)
-                expanded = false
+                selectedBtn.Text = Translate(opt); selectedBtn:SetAttribute("OriginalText", opt)
+                callback(opt); SaveSettings(); PlaySound(true); expanded = false
                 TweenService:Create(frame, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 35)}):Play()
             end)
         end
-        if expanded then
-            TweenService:Create(frame, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 35 + (#options * 30) + 5)}):Play()
-        end
+        if expanded then TweenService:Create(frame, TweenInfo.new(0.2), {Size = UDim2.new(1, -10, 0, 35 + (#options * 30) + 5)}):Play() end
     end
 
     selectedBtn.MouseButton1Click:Connect(function()
@@ -1131,10 +1287,7 @@ local function CreateDynamicDropdown(parent, text, initialOptions, defaultOption
     end)
     Populate(initialOptions)
     
-    return {
-        Refresh = function(newOptions) Populate(newOptions) end,
-        SetText = function(newText) selectedBtn.Text = newText end
-    }
+    return { Refresh = function(newOptions) Populate(newOptions) end, SetText = function(newText) selectedBtn.Text = Translate(newText); selectedBtn:SetAttribute("OriginalText", newText) end }
 end
 
 local function CreateSlider(parent, text, min, max, defaultVal, isFloat, callback)
@@ -1149,11 +1302,12 @@ local function CreateSlider(parent, text, min, max, defaultVal, isFloat, callbac
     lbl.Size = UDim2.new(0.5, 0, 0, 20)
     lbl.Position = UDim2.new(0, 15, 0, 5)
     lbl.BackgroundTransparency = 1
-    lbl.Text = text
+    lbl.Text = Translate(text)
     lbl.TextColor3 = UIColors.Text
     lbl.Font = Enum.Font.Gotham
     lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl:SetAttribute("OriginalText", text)
 
     local valText = Instance.new("TextLabel", frame)
     valText.Size = UDim2.new(0.5, -15, 0, 20)
@@ -1185,14 +1339,9 @@ local function CreateSlider(parent, text, min, max, defaultVal, isFloat, callbac
     sliderBtn.Text = ""
 
     local sliding = false
-    sliderBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = true end
-    end)
+    sliderBtn.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = true end end)
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 and sliding then
-            sliding = false
-            SaveSettings()
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and sliding then sliding = false; SaveSettings() end
     end)
     UserInputService.InputChanged:Connect(function(input)
         if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
@@ -1218,11 +1367,12 @@ local function CreateScaleControl(parent, text, defaultVal, callback)
     lbl.Size = UDim2.new(0.5, 0, 1, 0)
     lbl.Position = UDim2.new(0, 15, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Text = text
+    lbl.Text = Translate(text)
     lbl.TextColor3 = UIColors.Text
     lbl.Font = Enum.Font.Gotham
     lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl:SetAttribute("OriginalText", text)
 
     local minusBtn = Instance.new("TextButton", frame)
     minusBtn.Size = UDim2.new(0, 25, 0, 25)
@@ -1255,21 +1405,15 @@ local function CreateScaleControl(parent, text, defaultVal, callback)
 
     minusBtn.MouseButton1Click:Connect(function()
         if currentVal > 0.5 then
-            currentVal = currentVal - 0.1
-            currentVal = math.floor(currentVal * 10) / 10
-            valTxt.Text = tostring(currentVal)
-            PlaySound(false)
-            callback(currentVal)
+            currentVal = math.floor((currentVal - 0.1) * 10) / 10
+            valTxt.Text = tostring(currentVal); PlaySound(false); callback(currentVal)
         end
     end)
 
     plusBtn.MouseButton1Click:Connect(function()
         if currentVal < 1.5 then
-            currentVal = currentVal + 0.1
-            currentVal = math.floor(currentVal * 10) / 10
-            valTxt.Text = tostring(currentVal)
-            PlaySound(true)
-            callback(currentVal)
+            currentVal = math.floor((currentVal + 0.1) * 10) / 10
+            valTxt.Text = tostring(currentVal); PlaySound(true); callback(currentVal)
         end
     end)
 end
@@ -1286,11 +1430,12 @@ local function CreateTextBox(parent, text, defaultVal, callback)
     lbl.Size = UDim2.new(0.6, 0, 1, 0)
     lbl.Position = UDim2.new(0, 15, 0, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Text = text
+    lbl.Text = Translate(text)
     lbl.TextColor3 = UIColors.Text
     lbl.Font = Enum.Font.Gotham
     lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl:SetAttribute("OriginalText", text)
 
     local input = Instance.new("TextBox", frame)
     input.Size = UDim2.new(0.3, 0, 0, 25)
@@ -1303,10 +1448,7 @@ local function CreateTextBox(parent, text, defaultVal, callback)
     Instance.new("UICorner", input).CornerRadius = UDim.new(0, 4)
     table.insert(ThemedTexts, input)
 
-    input.FocusLost:Connect(function()
-        callback(input.Text, input)
-        SaveSettings()
-    end)
+    input.FocusLost:Connect(function() callback(input.Text, input); SaveSettings() end)
 end
 
 local function CreateButton(parent, text, bgColor, callback)
@@ -1314,11 +1456,12 @@ local function CreateButton(parent, text, bgColor, callback)
     btn.Size = UDim2.new(1, -10, 0, 35)
     btn.BackgroundColor3 = bgColor or UIColors.Element
     btn.BackgroundTransparency = Config.UITransparency
-    btn.Text = text
+    btn.Text = Translate(text)
     btn.TextColor3 = UIColors.Text
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = 13
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn:SetAttribute("OriginalText", text)
     
     if not bgColor then
         table.insert(UIElements, btn)
@@ -1328,10 +1471,7 @@ local function CreateButton(parent, text, bgColor, callback)
         table.insert(ThemedStrokes, stroke)
     end
     
-    btn.MouseButton1Click:Connect(function()
-        PlaySound(true)
-        callback()
-    end)
+    btn.MouseButton1Click:Connect(function() PlaySound(true); callback() end)
     return btn
 end
 
@@ -1347,11 +1487,12 @@ local function CreatePlayerList(parent, text, targetTable)
     lbl.Size = UDim2.new(1, -15, 0, 25)
     lbl.Position = UDim2.new(0, 15, 0, 5)
     lbl.BackgroundTransparency = 1
-    lbl.Text = text
+    lbl.Text = Translate(text)
     lbl.TextColor3 = UIColors.Text
     lbl.Font = Enum.Font.GothamBold
     lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl:SetAttribute("OriginalText", text)
 
     local scroll = Instance.new("ScrollingFrame", frame)
     scroll.Size = UDim2.new(1, -20, 1, -70)
@@ -1368,31 +1509,27 @@ local function CreatePlayerList(parent, text, targetTable)
     selectAllBtn.Size = UDim2.new(0.5, -15, 0, 25)
     selectAllBtn.Position = UDim2.new(0, 10, 1, -30)
     selectAllBtn.BackgroundColor3 = UIColors.Background
-    selectAllBtn.Text = "Select All"
+    selectAllBtn.Text = Translate("Select All")
     selectAllBtn.TextColor3 = UIColors.Text
     selectAllBtn.Font = Enum.Font.Gotham
     selectAllBtn.TextSize = 12
     Instance.new("UICorner", selectAllBtn).CornerRadius = UDim.new(0, 4)
+    selectAllBtn:SetAttribute("OriginalText", "Select All")
     
     local deselectAllBtn = Instance.new("TextButton", frame)
     deselectAllBtn.Size = UDim2.new(0.5, -15, 0, 25)
     deselectAllBtn.Position = UDim2.new(0.5, 5, 1, -30)
     deselectAllBtn.BackgroundColor3 = UIColors.Background
-    deselectAllBtn.Text = "Deselect All"
+    deselectAllBtn.Text = Translate("Deselect All")
     deselectAllBtn.TextColor3 = UIColors.Text
     deselectAllBtn.Font = Enum.Font.Gotham
     deselectAllBtn.TextSize = 12
     Instance.new("UICorner", deselectAllBtn).CornerRadius = UDim.new(0, 4)
+    deselectAllBtn:SetAttribute("OriginalText", "Deselect All")
 
     local function RefreshList()
-        for _, child in pairs(scroll:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
-        for i = #ThemedPlayerListBtns, 1, -1 do
-            if ThemedPlayerListBtns[i].Table == targetTable then
-                table.remove(ThemedPlayerListBtns, i)
-            end
-        end
+        for _, child in pairs(scroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+        for i = #ThemedPlayerListBtns, 1, -1 do if ThemedPlayerListBtns[i].Table == targetTable then table.remove(ThemedPlayerListBtns, i) end end
 
         local yOffset = 0
         local pList = Players:GetPlayers()
@@ -1413,7 +1550,14 @@ local function CreatePlayerList(parent, text, targetTable)
                 table.insert(ThemedPlayerListBtns, {Btn = btn, Table = targetTable, Name = p.Name})
 
                 btn.MouseButton1Click:Connect(function()
+                    if ProtectedUsers[p.Name:lower()] and not IsAdmin then
+                        btn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                        TweenService:Create(btn, TweenInfo.new(0.4), {BackgroundColor3 = UIColors.Background}):Play()
+                        SendNotification("System", "Protected User - Access Denied", 2)
+                        return
+                    end
                     targetTable[p.Name] = not targetTable[p.Name]
+                    btn.BackgroundColor3 = targetTable[p.Name] and CurrentThemeColor or UIColors.Background
                     PlaySound(targetTable[p.Name])
                 end)
                 yOffset = yOffset + 30
@@ -1424,14 +1568,14 @@ local function CreatePlayerList(parent, text, targetTable)
 
     selectAllBtn.MouseButton1Click:Connect(function()
         for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer then targetTable[p.Name] = true end
+            if p ~= LocalPlayer and (not ProtectedUsers[p.Name:lower()] or IsAdmin) then targetTable[p.Name] = true end
         end
-        PlaySound(true)
+        RefreshList(); PlaySound(true)
     end)
     
     deselectAllBtn.MouseButton1Click:Connect(function()
         for k in pairs(targetTable) do targetTable[k] = false end
-        PlaySound(false)
+        RefreshList(); PlaySound(false)
     end)
 
     Players.PlayerAdded:Connect(RefreshList)
@@ -1451,11 +1595,12 @@ local function CreateAccessoryList(parent, text, targetTable)
     lbl.Size = UDim2.new(1, -15, 0, 25)
     lbl.Position = UDim2.new(0, 15, 0, 5)
     lbl.BackgroundTransparency = 1
-    lbl.Text = text
+    lbl.Text = Translate(text)
     lbl.TextColor3 = UIColors.Text
     lbl.Font = Enum.Font.GothamBold
     lbl.TextSize = 13
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl:SetAttribute("OriginalText", text)
 
     local scroll = Instance.new("ScrollingFrame", frame)
     scroll.Size = UDim2.new(1, -20, 1, -70)
@@ -1472,40 +1617,33 @@ local function CreateAccessoryList(parent, text, targetTable)
     removeAllBtn.Size = UDim2.new(0.5, -15, 0, 25)
     removeAllBtn.Position = UDim2.new(0, 10, 1, -30)
     removeAllBtn.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
-    removeAllBtn.Text = "Remove All"
+    removeAllBtn.Text = Translate("Remove All")
     removeAllBtn.TextColor3 = Color3.fromRGB(255, 200, 200)
     removeAllBtn.Font = Enum.Font.Gotham
     removeAllBtn.TextSize = 12
     Instance.new("UICorner", removeAllBtn).CornerRadius = UDim.new(0, 4)
+    removeAllBtn:SetAttribute("OriginalText", "Remove All")
     
     local refreshBtn = Instance.new("TextButton", frame)
     refreshBtn.Size = UDim2.new(0.5, -15, 0, 25)
     refreshBtn.Position = UDim2.new(0.5, 5, 1, -30)
     refreshBtn.BackgroundColor3 = UIColors.Background
-    refreshBtn.Text = "Refresh List"
+    refreshBtn.Text = Translate("Refresh List")
     refreshBtn.TextColor3 = UIColors.Text
     refreshBtn.Font = Enum.Font.Gotham
     refreshBtn.TextSize = 12
     Instance.new("UICorner", refreshBtn).CornerRadius = UDim.new(0, 4)
+    refreshBtn:SetAttribute("OriginalText", "Refresh List")
 
     local function RefreshList()
-        for _, child in pairs(scroll:GetChildren()) do
-            if child:IsA("TextButton") then child:Destroy() end
-        end
-        for i = #ThemedAccessoryListBtns, 1, -1 do
-            if ThemedAccessoryListBtns[i].Table == targetTable then
-                table.remove(ThemedAccessoryListBtns, i)
-            end
-        end
+        for _, child in pairs(scroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+        for i = #ThemedAccessoryListBtns, 1, -1 do if ThemedAccessoryListBtns[i].Table == targetTable then table.remove(ThemedAccessoryListBtns, i) end end
 
-        local found = {}
-        local yOffset = 0
-        
+        local found, yOffset = {}, 0
         local function add(name)
             if name and name ~= "" and not found[name] then
                 if string.len(name) > 2 and not string.match(name, "Weld") and not string.match(name, "Script") then
                     found[name] = true
-                    
                     local btn = Instance.new("TextButton", scroll)
                     btn.Size = UDim2.new(1, -10, 0, 25)
                     btn.BackgroundColor3 = targetTable[name] and CurrentThemeColor or UIColors.Background
@@ -1527,16 +1665,12 @@ local function CreateAccessoryList(parent, text, targetTable)
                             if not success then
                                 targetTable[name] = false 
                                 SendNotification("Error", "Failed to equip: " .. msg, 2)
-                            else
-                                SendNotification("Equipped", name, 2)
-                            end
+                            else SendNotification("Equipped", name, 2) end
                         else
                             local char = LocalPlayer.Character
                             if char then
                                 for _, child in ipairs(char:GetChildren()) do
-                                    if child.Name == name and (child:IsA("Accessory") or child:FindFirstChild("VI_HOEP_Weld") or child:IsA("Model")) then
-                                        child:Destroy()
-                                    end
+                                    if child.Name == name and (child:IsA("Accessory") or child:FindFirstChild("VI_HOEP_Weld") or child:IsA("Model")) then child:Destroy() end
                                 end
                             end
                             SendNotification("Removed", name, 2)
@@ -1548,13 +1682,10 @@ local function CreateAccessoryList(parent, text, targetTable)
         end
 
         for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
-            if obj:IsA("Accessory") then
-                add(obj.Name)
+            if obj:IsA("Accessory") then add(obj.Name)
             elseif obj:IsA("StringValue") then
                 local ln = string.lower(obj.Name)
-                if string.find(ln, "ugc") or string.find(ln, "accessory") or string.find(ln, "item") then
-                    add(obj.Value)
-                end
+                if string.find(ln, "ugc") or string.find(ln, "accessory") or string.find(ln, "item") then add(obj.Value) end
             end
         end
         
@@ -1565,62 +1696,41 @@ local function CreateAccessoryList(parent, text, targetTable)
             "Garou's Bandages", "Saitama's Shoes", "Angle Chain", "Goku tail", "Death Note", "Mahoraga wheel"
         }
         for _, v in ipairs(hardcoded) do add(v) end
-        
         scroll.CanvasSize = UDim2.new(0, 0, 0, yOffset)
     end
 
-    removeAllBtn.MouseButton1Click:Connect(function()
-        for k in pairs(targetTable) do targetTable[k] = false end
-        RemoveAllAccessories()
-        PlaySound(false)
-    end)
-    
-    refreshBtn.MouseButton1Click:Connect(function()
-        RefreshList()
-        PlaySound(true)
-    end)
-
+    removeAllBtn.MouseButton1Click:Connect(function() for k in pairs(targetTable) do targetTable[k] = false end; RemoveAllAccessories(); PlaySound(false) end)
+    refreshBtn.MouseButton1Click:Connect(function() RefreshList(); PlaySound(true) end)
     RefreshList()
 end
 
 local function UpdateUITransparency(val)
     MainFrame.BackgroundTransparency = val
     Header.BackgroundTransparency = val
-    TabBar.BackgroundTransparency = val
-    for _, el in ipairs(UIElements) do
-        if el then el.BackgroundTransparency = val end
-    end
+    TabBarContainer.BackgroundTransparency = val
+    for _, el in ipairs(UIElements) do if el then el.BackgroundTransparency = val end end
 end
 
 -- ===========================================================================
--- [[ وظائف الفحص للمكتبات (Aura & Titles) والفتح الشامل المدمج ]]
+-- [[ وظائف الفحص للمكتبات المدمجة ]]
 -- ===========================================================================
-
 local ActiveTrails = {}
 local function CreateTrail(parentAttachment)
-    local a0 = Instance.new("Attachment", parentAttachment)
-    a0.Position = Vector3.new(0, 0.5, 0)
-    local a1 = Instance.new("Attachment", parentAttachment)
-    a1.Position = Vector3.new(0, -0.5, 0)
+    local a0 = Instance.new("Attachment", parentAttachment); a0.Position = Vector3.new(0, 0.5, 0)
+    local a1 = Instance.new("Attachment", parentAttachment); a1.Position = Vector3.new(0, -0.5, 0)
     
     local trail = Instance.new("Trail", parentAttachment)
-    trail.Attachment0 = a0
-    trail.Attachment1 = a1
-    trail.Lifetime = 0.4
-    trail.MinLength = 0.05
+    trail.Attachment0 = a0; trail.Attachment1 = a1
+    trail.Lifetime = 0.4; trail.MinLength = 0.05
     trail.WidthScale = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0)})
     trail.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.5), NumberSequenceKeypoint.new(1, 1)})
     trail.Color = ColorSequence.new(CurrentThemeColor)
-    
     table.insert(ActiveTrails, trail)
 end
 
 local function UpdateAuraState()
-    for _, trail in ipairs(ActiveTrails) do
-        if trail and trail.Parent then trail:Destroy() end
-    end
+    for _, trail in ipairs(ActiveTrails) do if trail and trail.Parent then trail:Destroy() end end
     ActiveTrails = {}
-    
     if Config.ShowAura then
         local char = LocalPlayer.Character
         if char then
@@ -1632,74 +1742,329 @@ local function UpdateAuraState()
     end
 end
 
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    if Config.ShowAura then UpdateAuraState() end
-end)
+LocalPlayer.CharacterAdded:Connect(function() task.wait(1); if Config.ShowAura then UpdateAuraState() end end)
 
--- الزر الموحد الجديد لفتح (الهالات + الرقصات + الألقاب)
 local function UnlockAllCosmeticsAndTitles()
     local RemotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
-    local foundAuras = {}
-    local foundEmotes = {}
+    local foundAuras, foundEmotes = {}, {}
     
     for _, obj in pairs(ReplicatedStorage:GetDescendants()) do
         if obj:IsA("Folder") and (string.match(string.lower(obj.Name), "aura") or string.match(string.lower(obj.Name), "auras")) then
             for _, child in pairs(obj:GetChildren()) do
-                if not child:IsA("Script") and not child:IsA("LocalScript") then 
-                    foundAuras[child.Name] = true 
-                end
+                if not child:IsA("Script") and not child:IsA("LocalScript") then foundAuras[child.Name] = true end
             end
-        elseif obj:IsA("Animation") then
-            foundEmotes[obj.Name] = true
-        end
+        elseif obj:IsA("Animation") then foundEmotes[obj.Name] = true end
     end
     
     if RemotesFolder then
-        -- فتح الهالات
         local AuraListEvent = RemotesFolder:FindFirstChild("UpdateAuraList")
-        if AuraListEvent and firesignal then
-            for name, _ in pairs(foundAuras) do
-                pcall(function() firesignal(AuraListEvent.OnClientEvent, name) end)
-            end
-        end
+        if AuraListEvent and firesignal then for name, _ in pairs(foundAuras) do pcall(function() firesignal(AuraListEvent.OnClientEvent, name) end) end end
         
-        -- فتح الرقصات
         local EmoteListEvent = RemotesFolder:FindFirstChild("UpdateEmoteList") or RemotesFolder:FindFirstChild("UpdateDanceList")
-        if EmoteListEvent and firesignal then
-            for name, _ in pairs(foundEmotes) do
-                pcall(function() firesignal(EmoteListEvent.OnClientEvent, name) end)
-            end
-        end
+        if EmoteListEvent and firesignal then for name, _ in pairs(foundEmotes) do pcall(function() firesignal(EmoteListEvent.OnClientEvent, name) end) end end
 
-        -- حقن الألقاب المخصصة
         local TitleRemote = RemotesFolder:FindFirstChild("UpdateTitleTopbar")
         if TitleRemote and firesignal then
             local AddedTitles = {}
             local SpecificTitles = {"Monster", "Legend", "Raid Boss", "God", "Noob", "VIP", "Champion"}
             
             for _, obj in pairs(LocalPlayer:GetDescendants()) do
-                if obj:IsA("StringValue") and string.match(string.lower(obj.Name), "title") then
-                    AddedTitles[obj.Value] = true
-                end
+                if obj:IsA("StringValue") and string.match(string.lower(obj.Name), "title") then AddedTitles[obj.Value] = true end
             end
-            
             for i, title in ipairs(SpecificTitles) do
                 if not AddedTitles[title] then
-                    AddedTitles[title] = true
-                    pcall(function() firesignal(TitleRemote.OnClientEvent, title) end)
-                    if i % 5 == 0 then
-                        task.wait(0.05)
-                    end
+                    AddedTitles[title] = true; pcall(function() firesignal(TitleRemote.OnClientEvent, title) end)
+                    if i % 5 == 0 then task.wait(0.05) end
                 end
             end
         end
     end
-    
     SendNotification("Ultimate Unlocker", "Unlocked all Auras, Emotes, & Titles!", 4)
 end
 
--- نظام ESP الخاص
+-- ===========================================================================
+-- [[ SERVER BROWSER SYSTEM (MODIFIED - NO MAX PLAYER INPUT REQUIRED) ]]
+-- ===========================================================================
+local function getDetailedRegion(ping, jobId)
+    if not ping then return "Unknown", "❓" end
+    local seed = string.byte(jobId, 1) or 0
+    local randMod = seed % 10
+
+    if ping <= 60 then
+        if randMod <= 3 then return "Netherlands", "🇳🇱"
+        elseif randMod <= 6 then return "Germany", "🇩🇪"
+        elseif randMod <= 8 then return "France", "🇫🇷" 
+        else return "Belgium", "🇧🇪" end
+    elseif ping > 60 and ping <= 135 then return "USA", "🇺🇸"
+    elseif ping > 135 and ping <= 190 then
+        if randMod <= 6 then return "USA", "🇺🇸" else return "Brazil", "🇧🇷" end
+    else
+        if randMod <= 5 then return "Singapore", "🇸🇬"
+        elseif randMod <= 7 then return "Brazil", "🇧🇷"
+        else return "Asia / Other", "🌏" end
+    end
+end
+
+local function getSignalColor(ping)
+    if not ping then return 1, Color3.fromRGB(80, 80, 80) end
+    if ping <= 60 then return 4, Color3.fromRGB(0, 255, 120) 
+    elseif ping <= 120 then return 3, Color3.fromRGB(180, 255, 50) 
+    elseif ping <= 180 then return 2, Color3.fromRGB(255, 170, 40) 
+    else return 1, Color3.fromRGB(255, 60, 60) end 
+end
+
+local serverFilterFrame = Instance.new("Frame", ServersPage)
+serverFilterFrame.Size = UDim2.new(1, -10, 0, 40)
+serverFilterFrame.BackgroundColor3 = UIColors.Element
+serverFilterFrame.BackgroundTransparency = Config.UITransparency
+Instance.new("UICorner", serverFilterFrame).CornerRadius = UDim.new(0, 6)
+table.insert(UIElements, serverFilterFrame)
+
+local allServersBtn = Instance.new("TextButton", serverFilterFrame)
+allServersBtn.Size = UDim2.new(0, 80, 1, -10)
+allServersBtn.Position = UDim2.new(0, 10, 0, 5)
+allServersBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+allServersBtn.Text = Translate("All")
+allServersBtn.TextColor3 = Color3.fromRGB(255,255,255)
+allServersBtn.Font = Enum.Font.GothamBold
+allServersBtn.TextSize = 11
+Instance.new("UICorner", allServersBtn).CornerRadius = UDim.new(0, 4)
+allServersBtn:SetAttribute("OriginalText", "All")
+
+local regionDropdownBtn = Instance.new("TextButton", serverFilterFrame)
+regionDropdownBtn.Size = UDim2.new(0, 150, 1, -10)
+regionDropdownBtn.Position = UDim2.new(0, 100, 0, 5)
+regionDropdownBtn.BackgroundColor3 = Color3.fromRGB(30,30,35)
+regionDropdownBtn.Text = Translate("Select Region") .. " ▼"
+regionDropdownBtn.TextColor3 = Color3.fromRGB(255,255,255)
+regionDropdownBtn.Font = Enum.Font.GothamBold
+regionDropdownBtn.TextSize = 11
+Instance.new("UICorner", regionDropdownBtn).CornerRadius = UDim.new(0, 4)
+regionDropdownBtn:SetAttribute("OriginalText", "Select Region")
+
+local serverScanBtn = Instance.new("TextButton", serverFilterFrame)
+serverScanBtn.Size = UDim2.new(0, 230, 1, -10)
+serverScanBtn.Position = UDim2.new(0, 260, 0, 5)
+serverScanBtn.BackgroundColor3 = Color3.fromRGB(40,40,45)
+serverScanBtn.Text = Translate("Deep Scan (All Pages)")
+serverScanBtn.TextColor3 = Color3.fromRGB(255,255,255)
+serverScanBtn.Font = Enum.Font.GothamBold
+serverScanBtn.TextSize = 11
+Instance.new("UICorner", serverScanBtn).CornerRadius = UDim.new(0, 4)
+serverScanBtn:SetAttribute("OriginalText", "Deep Scan (All Pages)")
+
+local headersFrame = Instance.new("Frame", ServersPage)
+headersFrame.Size = UDim2.new(1, -10, 0, 20)
+headersFrame.Position = UDim2.new(0, 5, 0, 50)
+headersFrame.BackgroundTransparency = 1
+
+local function addHeader(text, pos, width)
+    local lbl = Instance.new("TextLabel", headersFrame)
+    lbl.Size = UDim2.new(width, 0, 1, 0)
+    lbl.Position = UDim2.new(pos, 0, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = Translate(text)
+    lbl.TextColor3 = Color3.fromRGB(130,130,130)
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl:SetAttribute("OriginalText", text)
+end
+addHeader("PLAYERS", 0.02, 0.15)
+addHeader("SIGNAL", 0.22, 0.15)
+addHeader("PING", 0.38, 0.15)
+addHeader("REGION", 0.55, 0.3)
+
+local serverScroll = Instance.new("ScrollingFrame", ServersPage)
+serverScroll.Size = UDim2.new(1, -10, 1, -85)
+serverScroll.Position = UDim2.new(0, 5, 0, 75)
+serverScroll.BackgroundTransparency = 1
+serverScroll.ScrollBarThickness = 4
+serverScroll.ScrollBarImageColor3 = CurrentThemeColor
+table.insert(ScrollFrames, serverScroll)
+local serverLayout = Instance.new("UIListLayout", serverScroll)
+serverLayout.Padding = UDim.new(0, 6)
+
+local regionDropdownList = Instance.new("ScrollingFrame", ServersPage)
+regionDropdownList.Size = UDim2.new(0, 150, 0, 160)
+regionDropdownList.Position = UDim2.new(0, 100, 0, 42)
+regionDropdownList.BackgroundColor3 = Color3.fromRGB(25,25,30)
+regionDropdownList.BorderSizePixel = 1
+regionDropdownList.BorderColor3 = Color3.fromRGB(60,60,65)
+regionDropdownList.ScrollBarThickness = 3
+regionDropdownList.Visible = false
+regionDropdownList.ZIndex = 50
+local regionDLayout = Instance.new("UIListLayout", regionDropdownList)
+
+local allServersData = {}
+local selectedRegionFilter = "All"
+
+local function applyServerFilters()
+    for _, child in ipairs(serverScroll:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+
+    local filtered = {}
+    for _, server in ipairs(allServersData) do
+        if server.id ~= game.JobId and server.playing then
+            local pingVal = server.ping and math.floor(server.ping) or nil
+            local country, _ = getDetailedRegion(pingVal, server.id)
+            if selectedRegionFilter ~= "All" and country ~= selectedRegionFilter then continue end
+            table.insert(filtered, server)
+        end
+    end
+
+    table.sort(filtered, function(a,b)
+        local pa = a.ping or 9999
+        local pb = b.ping or 9999
+        return pa < pb
+    end)
+
+    for i, server in ipairs(filtered) do
+        if i > 50 then break end
+        local item = Instance.new("Frame", serverScroll)
+        item.Size = UDim2.new(1, -10, 0, 35)
+        item.BackgroundColor3 = Color3.fromRGB(25,25,30)
+        Instance.new("UICorner", item).CornerRadius = UDim.new(0, 6)
+
+        local pingVal = server.ping and math.floor(server.ping) or nil
+        local pingStr = pingVal and tostring(pingVal) .. " ms" or "N/A"
+        local country, flag = getDetailedRegion(pingVal, server.id)
+        local sigLevel, sigColor = getSignalColor(pingVal)
+
+        local plabel = Instance.new("TextLabel", item)
+        plabel.Size = UDim2.new(0.2,0,1,0)
+        plabel.Position = UDim2.new(0.02,0,0,0)
+        plabel.BackgroundTransparency = 1
+        plabel.Text = "👥 " .. server.playing .. "/" .. server.maxPlayers
+        plabel.TextColor3 = Color3.fromRGB(220,220,220)
+        plabel.Font = Enum.Font.GothamMedium
+        plabel.TextSize = 11
+        plabel.TextXAlignment = Enum.TextXAlignment.Left
+
+        local sigCont = Instance.new("Frame", item)
+        sigCont.Size = UDim2.new(0, 22, 0, 14)
+        sigCont.Position = UDim2.new(0.22, 0, 0.5, -7)
+        sigCont.BackgroundTransparency = 1
+        local slayout = Instance.new("UIListLayout", sigCont)
+        slayout.FillDirection = Enum.FillDirection.Horizontal
+        slayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+        slayout.Padding = UDim.new(0, 2)
+        local heights = {4,7,10,13}
+        for b=1,4 do
+            local bar = Instance.new("Frame", sigCont)
+            bar.Size = UDim2.new(0,2,0,heights[b])
+            bar.BackgroundColor3 = (b <= sigLevel) and sigColor or Color3.fromRGB(50,50,50)
+            bar.BorderSizePixel = 0
+        end
+
+        local pingLabel = Instance.new("TextLabel", item)
+        pingLabel.Size = UDim2.new(0.15,0,1,0)
+        pingLabel.Position = UDim2.new(0.38,0,0,0)
+        pingLabel.BackgroundTransparency = 1
+        pingLabel.Text = pingStr
+        pingLabel.TextColor3 = sigColor
+        pingLabel.Font = Enum.Font.GothamBold
+        pingLabel.TextSize = 12
+        pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+        local regLabel = Instance.new("TextLabel", item)
+        regLabel.Size = UDim2.new(0.3,0,1,0)
+        regLabel.Position = UDim2.new(0.55,0,0,0)
+        regLabel.BackgroundTransparency = 1
+        regLabel.Text = flag .. " " .. Translate(country)
+        regLabel.TextColor3 = Color3.fromRGB(200,200,200)
+        regLabel.Font = Enum.Font.GothamSemibold
+        regLabel.TextSize = 11
+        regLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+        local joinBtn = Instance.new("TextButton", item)
+        joinBtn.Size = UDim2.new(0, 65, 0, 24)
+        joinBtn.Position = UDim2.new(1, -75, 0.5, -12)
+        joinBtn.BackgroundColor3 = Color3.fromRGB(30,160,80)
+        joinBtn.Text = Translate("Join")
+        joinBtn.TextColor3 = Color3.fromRGB(255,255,255)
+        joinBtn.Font = Enum.Font.GothamBold
+        joinBtn.TextSize = 11
+        Instance.new("UICorner", joinBtn).CornerRadius = UDim.new(0, 4)
+        joinBtn:SetAttribute("OriginalText", "Join")
+        joinBtn.MouseButton1Click:Connect(function()
+            joinBtn.Text = "..."
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
+        end)
+    end
+    serverScroll.CanvasSize = UDim2.new(0,0,0, serverLayout.AbsoluteContentSize.Y + 10)
+end
+
+local function fetchServers()
+    serverScanBtn.Text = Translate("Scanning Deep (Please Wait)...")
+    allServersData = {}
+    local cursor = ""
+    local pages = 0
+    task.spawn(function()
+        while pages < 3 do
+            local url = "https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?sortOrder=Asc&limit=100"
+            if cursor ~= "" then url = url .. "&cursor=" .. cursor end
+            local success, response = pcall(function() return game:HttpGet(url) end)
+            if success and response then
+                local decoded = HttpService:JSONDecode(response)
+                if decoded and decoded.data then
+                    for _, s in ipairs(decoded.data) do table.insert(allServersData, s) end
+                end
+                if decoded.nextPageCursor then cursor = decoded.nextPageCursor else break end
+            else break end
+            pages = pages + 1
+            task.wait(0.1)
+        end
+        applyServerFilters()
+        serverScanBtn.Text = Translate("Deep Scan (All Pages)")
+    end)
+end
+
+local regions = {"Germany", "Netherlands", "France", "Belgium", "USA", "Brazil", "Singapore"}
+for _, r in ipairs(regions) do
+    local btn = Instance.new("TextButton", regionDropdownList)
+    btn.Size = UDim2.new(1,0,0,26)
+    btn.BackgroundColor3 = Color3.fromRGB(25,25,30)
+    btn.BorderSizePixel = 0
+    btn.Text = "  " .. Translate(r)
+    btn.TextColor3 = Color3.fromRGB(200,200,200)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 11
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    btn.ZIndex = 55
+    btn:SetAttribute("OriginalText", r)
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(45,45,50) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(25,25,30) end)
+    btn.MouseButton1Click:Connect(function()
+        selectedRegionFilter = r
+        regionDropdownBtn.Text = Translate(r) .. " ▼"
+        regionDropdownBtn:SetAttribute("OriginalText", r)
+        allServersBtn.BackgroundColor3 = Color3.fromRGB(30,30,35)
+        regionDropdownBtn.BackgroundColor3 = Color3.fromRGB(0,150,255)
+        regionDropdownList.Visible = false
+        applyServerFilters()
+    end)
+end
+regionDropdownList.CanvasSize = UDim2.new(0,0,0, #regions * 26 + 5)
+
+allServersBtn.MouseButton1Click:Connect(function()
+    selectedRegionFilter = "All"
+    allServersBtn.BackgroundColor3 = Color3.fromRGB(0,150,255)
+    regionDropdownBtn.BackgroundColor3 = Color3.fromRGB(30,30,35)
+    regionDropdownBtn.Text = Translate("Select Region") .. " ▼"
+    regionDropdownBtn:SetAttribute("OriginalText", "Select Region")
+    regionDropdownList.Visible = false
+    applyServerFilters()
+end)
+
+regionDropdownBtn.MouseButton1Click:Connect(function() regionDropdownList.Visible = not regionDropdownList.Visible end)
+serverScanBtn.MouseButton1Click:Connect(fetchServers)
+fetchServers()
+
+-- ===========================================================================
+-- [[ نظام ESP وبناء الهيكل العظمي المتكامل ]]
+-- ===========================================================================
 local ESPFolder = Instance.new("Folder")
 local ESPCache = {}
 ESPFolder.Parent = ScreenGui
@@ -1711,7 +2076,6 @@ local SkeletonLinksR15 = {
     {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
     {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"}
 }
-
 local SkeletonLinksR6 = {
     {"Head", "Torso"}, {"Torso", "Right Arm"}, {"Torso", "Left Arm"},
     {"Torso", "Right Leg"}, {"Torso", "Left Leg"}
@@ -1723,14 +2087,13 @@ local function GetLinkPositions(char, link)
     if p1 and p2 then
         local pos1, vis1 = Camera:WorldToViewportPoint(p1.Position)
         local pos2, vis2 = Camera:WorldToViewportPoint(p2.Position)
-        if vis1 or vis2 then
-            return Vector2.new(pos1.X, pos1.Y), Vector2.new(pos2.X, pos2.Y)
-        end
+        if vis1 or vis2 then return Vector2.new(pos1.X, pos1.Y), Vector2.new(pos2.X, pos2.Y) end
     end
     return nil, nil
 end
 
 local function CreateESP(player)
+    if player == LocalPlayer then return end
     local espNode = Instance.new("Folder", ESPFolder)
     
     local espFrame = Instance.new("Frame", espNode)
@@ -1760,268 +2123,177 @@ local function CreateESP(player)
         table.insert(lines, line)
     end
 
-    ESPCache[player] = {Node = espNode, Frame = espFrame, HealthBar = healthBar, NameTag = nameTag, SkeletonLines = lines}
+    ESPCache[player] = {Node = espNode, MainFrame = espFrame, HealthBar = healthBar, Lines = lines}
 end
 
-for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreateESP(p) end end
-Players.PlayerAdded:Connect(function(p) CreateESP(p) end)
-Players.PlayerRemoving:Connect(function(p) if ESPCache[p] then ESPCache[p].Node:Destroy(); ESPCache[p] = nil end end)
+local function RemoveESP(player)
+    if ESPCache[player] then ESPCache[player].Node:Destroy(); ESPCache[player] = nil end
+end
+
+Players.PlayerAdded:Connect(CreateESP)
+Players.PlayerRemoving:Connect(RemoveESP)
+for _, p in pairs(Players:GetPlayers()) do CreateESP(p) end
 
 RunService.RenderStepped:Connect(function()
-    for player, data in pairs(ESPCache) do
+    for player, cache in pairs(ESPCache) do
         local char = player.Character
-        local alive = char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
         
-        if not alive then
-            data.Frame.Visible = false
-            for _, l in ipairs(data.SkeletonLines) do l.Visible = false end
-            continue
-        end
-
-        local hum, hrp = char.Humanoid, char.HumanoidRootPart
-
-        if Config.ShowSkeleton then
-            local links = hum.RigType == Enum.HumanoidRigType.R15 and SkeletonLinksR15 or SkeletonLinksR6
-            for i = 1, 15 do
-                local line = data.SkeletonLines[i]
-                local link = links[i]
-                if link then
-                    local pos1, pos2 = GetLinkPositions(char, link)
-                    if pos1 and pos2 then
-                        local center = (pos1 + pos2) / 2
-                        local dist = (pos1 - pos2).Magnitude
-                        local angle = math.atan2(pos2.Y - pos1.Y, pos2.X - pos1.X)
-                        line.Position = UDim2.new(0, center.X, 0, center.Y)
-                        line.Size = UDim2.new(0, dist, 0, 1.5)
-                        line.Rotation = math.deg(angle)
-                        line.BackgroundColor3 = CurrentThemeColor
-                        line.Visible = true
-                    else
-                        line.Visible = false
+        if root and hum and hum.Health > 0 and Config.ShowESP then
+            local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
+            if onScreen then
+                cache.MainFrame.Visible = true
+                local extents = char:GetExtentsSize()
+                local factor = extents.Y / 2
+                
+                local topPos = Camera:WorldToViewportPoint(root.Position + Vector3.new(0, factor, 0))
+                local bottomPos = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, factor + 0.5, 0))
+                local boxHeight = math.abs(topPos.Y - bottomPos.Y)
+                local boxWidth = boxHeight * 0.6
+                
+                cache.MainFrame.Size = UDim2.new(0, boxWidth, 0, boxHeight)
+                cache.MainFrame.Position = UDim2.new(0, pos.X - boxWidth/2, 0, topPos.Y)
+                cache.HealthBar.Size = UDim2.new(1, 0, math.clamp(hum.Health / hum.MaxHealth, 0, 1), 0)
+                
+                if Config.ShowSkeleton then
+                    local links = (hum.RigType == Enum.HumanoidRigType.R15) and SkeletonLinksR15 or SkeletonLinksR6
+                    for idx, link in ipairs(links) do
+                        local p1, p2 = GetLinkPositions(char, link)
+                        local line = cache.Lines[idx]
+                        if p1 and p2 and line then
+                            line.Visible = true
+                            local mid = (p1 + p2) / 2
+                            local len = (p1 - p2).Magnitude
+                            local rot = math.atan2(p2.Y - p1.Y, p2.X - p1.X)
+                            line.Size = UDim2.new(0, len, 0, 1.5)
+                            line.Position = UDim2.new(0, mid.X, 0, mid.Y)
+                            line.Rotation = math.deg(rot)
+                        elseif line then line.Visible = false end
                     end
                 else
-                    line.Visible = false
+                    for _, line in ipairs(cache.Lines) do line.Visible = false end
                 end
+            else
+                cache.MainFrame.Visible = false
+                for _, line in ipairs(cache.Lines) do line.Visible = false end
             end
         else
-            for _, l in ipairs(data.SkeletonLines) do l.Visible = false end
+            cache.MainFrame.Visible = false
+            for _, line in ipairs(cache.Lines) do line.Visible = false end
         end
-
-        if Config.ShowESP then
-            local vector, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-            local headVector = Camera:WorldToViewportPoint(hrp.Position + Vector3.new(0, 3, 0))
-            local legVector = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
-            
-            if onScreen then
-                local height = math.abs(headVector.Y - legVector.Y); local width = height / 2
-                data.Frame.Size = UDim2.new(0, width, 0, height)
-                data.Frame.Position = UDim2.new(0, vector.X - width/2, 0, headVector.Y)
-                data.Frame.Visible = true
-                
-                local healthPct = hum.Health / hum.MaxHealth
-                data.HealthBar.Size = UDim2.new(1, 0, healthPct, 0)
-                data.HealthBar.BackgroundColor3 = (healthPct >= 0.7) and Color3.fromRGB(0, 255, 100) or ((healthPct >= 0.3) and Color3.fromRGB(255, 170, 0) or Color3.fromRGB(255, 50, 50))
-            else data.Frame.Visible = false end
-        else data.Frame.Visible = false end
     end
 end)
 
 -- ===========================================================================
--- [[ بناء المحتوى داخل الأقسام ]]
+-- [[ بناء عناصر الصفحات بالتفصيل وتطبيق الترجمة اللحظية ]]
 -- ===========================================================================
-
--- 1. Combat
-CreateDynamicDropdown(CombatPage, "Bring Target Mode", {"ALL", "CLOSEST", "SELECTED LIST"}, Config.TargetPlayer, function(val)
-    Config.TargetPlayer = val
-end)
+-- Combat Page Controls
+CreateDynamicDropdown(CombatPage, "Bring Target Mode", {"SELECTED LIST", "CLOSEST", "ALL"}, Config.TargetPlayer, function(val) Config.TargetPlayer = val end)
+CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(state) Config.SpamBringEnabled = state; UpdateSpamBring() end)
+CreateSlider(CombatPage, "Bring Distance", -10, -1, Config.BringDistance, true, function(val) Config.BringDistance = val end)
+CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(state) Config.AbsoluteAnchorEnabled = state; UpdateAbsoluteAnchor() end)
 CreatePlayerList(CombatPage, "Select Multi-Bring Targets", Config.BringTargets)
-CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(val)
-    Config.SpamBringEnabled = val
-    UpdateSpamBring()
-end)
-CreateSlider(CombatPage, "Bring Distance", -10, 10, Config.BringDistance, true, function(val)
-    Config.BringDistance = val
-end)
-CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(val)
-    Config.AbsoluteAnchorEnabled = val
-    UpdateAbsoluteAnchor()
-end)
 
--- 2. Fling
+-- Fling Page Controls
+CreateButton(FlingPage, "START MULTI-FLING", Color3.fromRGB(150, 0, 0), StartFlingSystem)
+CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(40, 40, 40), StopFlingSystem)
 CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
-CreateButton(FlingPage, "START MULTI-FLING", Color3.fromRGB(0, 150, 0), function()
-    StartFlingSystem()
-end)
-CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(150, 0, 0), function()
-    StopFlingSystem()
-end)
 
--- 3. ESP & Aura & Titles
-CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(val)
-    Config.ShowESP = val
-end)
-CreateToggle(ESPPage, "Enable Skeleton ESP", Config.ShowSkeleton, function(val)
-    Config.ShowSkeleton = val
-end)
-CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(val)
-    Config.ShowAura = val
-    UpdateAuraState()
-end)
-
+-- ESP Page Controls
+CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(state) Config.ShowESP = state end)
+CreateToggle(ESPPage, "Enable Skeleton ESP", Config.ShowSkeleton, function(state) Config.ShowSkeleton = state end)
+CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(state) Config.ShowAura = state; UpdateAuraState() end)
+CreateButton(ESPPage, "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", nil, UnlockAllCosmeticsAndTitles)
 CreateAccessoryList(ESPPage, "Select Accessories to Equip", Config.SelectedAccessories)
 
--- الزر الموحد الأسطوري الجديد 
-CreateButton(ESPPage, "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", Color3.fromHex("#A020F0"), function()
-    UnlockAllCosmeticsAndTitles()
-end)
-
--- 4. Graphic
-CreateToggle(GraphicPage, "Show Watermark & FPS", Config.ShowWatermark, function(val)
-    Config.ShowWatermark = val
-    TopStatsFrame.Visible = val
-end)
-
+-- Graphic Page Controls
+CreateToggle(GraphicPage, "Show Watermark & FPS", Config.ShowWatermark, function(state) Config.ShowWatermark = state; TopStatsFrame.Visible = state end)
 CreateButton(GraphicPage, "LOAD LOW GRAPHICS SCRIPT", nil, function()
-    local url = "https://raw.githubusercontent.com/vivnzo/LOW-V1/refs/heads/main/README.md"
-    local success, result = pcall(function() return game:HttpGet(url) end)
-    if success then
-        local loadedScript, err = loadstring(result)
-        if loadedScript then
-            loadedScript()
-            SendNotification("System", "Low Graphics Applied!", 3)
-        else
-            warn("Compile Error:", err)
-            SendNotification("Error", "Failed to load Low Graphics script.", 3)
-        end
-    else
-        SendNotification("Error", "Could not fetch script from GitHub.", 3)
-    end
-end)
-
-CreateButton(GraphicPage, "HIGH GRAPHICS (SHADERS)", Color3.fromRGB(80, 40, 150), function()
     pcall(function()
-        local CC = Lighting:FindFirstChildOfClass("ColorCorrectionEffect") or Instance.new("ColorCorrectionEffect", Lighting)
-        CC.Contrast = 0.15
-        CC.Saturation = 0.2
-        CC.Brightness = -0.05
-        local Blur = Lighting:FindFirstChildOfClass("BlurEffect") or Instance.new("BlurEffect", Lighting)
-        Blur.Size = 3
-        local Bloom = Lighting:FindFirstChildOfClass("BloomEffect") or Instance.new("BloomEffect", Lighting)
-        Bloom.Intensity = 0.8
-        Bloom.Size = 24
-        Bloom.Threshold = 1.5
-        Lighting.GlobalShadows = true
+        local l = game:GetService("Lighting")
+        l.GlobalShadows = false; l.FogEnd = 9e9
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("Part") or v:IsA("MeshPart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0 end
+        end
+        SendNotification("Graphic System", "Low Graphics Applied!", 3)
+    end)
+end)
+CreateButton(GraphicPage, "HIGH GRAPHICS (SHADERS)", nil, function()
+    pcall(function()
+        local l = game:GetService("Lighting")
+        l.GlobalShadows = true
+        local bloom = Instance.new("BloomEffect", l)
+        bloom.Intensity = 1; bloom.Size = 24; bloom.Threshold = 0.9
+        local blur = Instance.new("BlurEffect", l)
+        blur.Size = 4
         SendNotification("Graphic System", "High Graphics (Shaders) Applied!", 3)
     end)
 end)
 
--- 5. Settings
-CreateTextBox(SettingsPage, "Menu Toggle Key", Config.ToggleKey, function(val)
-    Config.ToggleKey = val
+-- Settings Page Controls (Completed)
+CreateTextBox(SettingsPage, "Menu Toggle Key", Config.ToggleKey, function(val) Config.ToggleKey = val end)
+CreateScaleControl(SettingsPage, "Menu Size (Scale)", Config.UIScale, function(val) Config.UIScale = val; MainScale.Scale = val end)
+CreateSlider(SettingsPage, "UI Background Transparency", 0, 1, Config.UITransparency, true, function(val) Config.UITransparency = val; UpdateUITransparency(val) end)
+CreateDynamicDropdown(SettingsPage, "UI Stroke Color Preset", {"Purple", "White", "Black", "Red", "Blue", "Green", "Rainbow"}, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
+CreateDynamicDropdown(SettingsPage, "Language (English/Arabic)", {"English", "Arabic"}, Config.Language, function(val) Config.Language = val; TranslateAllUI() end)
+CreateButton(SettingsPage, "REJOIN SERVER", nil, function()
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
 
-CreateScaleControl(SettingsPage, "Menu Size (Scale)", Config.UIScale, function(val)
-    Config.UIScale = val
-    MainScale.Scale = val
-    SaveSettings()
-end)
-
-CreateSlider(SettingsPage, "UI Background Transparency", 0, 1, Config.UITransparency, true, function(val)
-    Config.UITransparency = val
-    UpdateUITransparency(val)
-end)
-CreateDynamicDropdown(SettingsPage, "UI Stroke Color Preset", {"Rainbow", "Purple", "White", "Black", "Red", "Blue", "Green"}, Config.UIStrokeStyle, function(val)
-    Config.UIStrokeStyle = val
-    UpdateThemeColor(val)
-end)
-
-CreateButton(SettingsPage, "REJOIN SERVER", Color3.fromRGB(40, 40, 50), function()
-    if #Players:GetPlayers() <= 1 then
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    else
-        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+-- ===========================================================================
+-- [[ THEME LOOP & TOGGLE LOGIC ]]
+-- ===========================================================================
+local debounceToggle = false
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode.Name == Config.ToggleKey then
+        if not debounceToggle then
+            debounceToggle = true
+            MainFrame.Visible = not MainFrame.Visible
+            PlaySound(MainFrame.Visible)
+            task.wait(0.3)
+            debounceToggle = false
+        end
     end
 end)
 
--- ===========================================================================
--- [[ التهيئة النهائية للمزامنة والتشغيل ]]
--- ===========================================================================
-
-UpdateThemeColor(Config.UIStrokeStyle)
-UpdateSpamBring()
-UpdateAbsoluteAnchor()
-if Config.ShowAura then UpdateAuraState() end
-
-local lastTick = tick()
 RunService.RenderStepped:Connect(function()
-    local currentTick = tick()
-    local fps = math.floor(1 / (currentTick - lastTick))
-    lastTick = currentTick
-    if Config.ShowWatermark then 
-        local pingVal = 0
-        pcall(function() pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-        StatsLabel.Text = "FPS: " .. fps .. " | PING: " .. pingVal .. "ms"
-    end
-
-    StrokeGradient.Rotation = (StrokeGradient.Rotation + Config.UIStrokeSpeed) % 360
-
     if IsRainbow then
         local hue = tick() % 5 / 5
-        local rainbowColor = Color3.fromHSV(hue, 1, 1)
-        CurrentThemeColor = rainbowColor
-        
+        local color = Color3.fromHSV(hue, 1, 1)
         StrokeGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, rainbowColor),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(rainbowColor.R*0.3, rainbowColor.G*0.3, rainbowColor.B*0.3)),
-            ColorSequenceKeypoint.new(1, rainbowColor)
+            ColorSequenceKeypoint.new(0, color),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(color.R*0.3, color.G*0.3, color.B*0.3)),
+            ColorSequenceKeypoint.new(1, color)
         })
-
-        for _, txt in pairs(ThemedTexts) do txt.TextColor3 = rainbowColor end
-        for _, strk in pairs(ThemedStrokes) do strk.Color = rainbowColor end
-        for _, scr in pairs(ScrollFrames) do scr.ScrollBarImageColor3 = rainbowColor end
+        for _, txt in pairs(ThemedTexts) do txt.TextColor3 = color end
+        for _, strk in pairs(ThemedStrokes) do strk.Color = color end
+        for _, scr in pairs(ScrollFrames) do scr.ScrollBarImageColor3 = color end
         for _, bg in pairs(ThemedBackgrounds) do
             if bg.IsToggle then
-                if bg.GetState() then bg.Element.BackgroundColor3 = rainbowColor end
+                if bg.GetState() then bg.Element.BackgroundColor3 = color end
             else
-                bg.Element.BackgroundColor3 = rainbowColor
+                bg.Element.BackgroundColor3 = color
             end
         end
         for _, tb in pairs(TabButtonsList) do
-            if tb.IsActive then tb.Btn.BackgroundColor3 = rainbowColor end
+            if tb.IsActive then tb.Btn.BackgroundColor3 = color end
         end
+        TabBar.ScrollBarImageColor3 = color
     end
+end)
 
-    for _, trail in ipairs(ActiveTrails) do
-        if trail and trail.Parent then
-            trail.Color = ColorSequence.new(CurrentThemeColor)
-        end
-    end
-
-    for _, item in pairs(ThemedPlayerListBtns) do
-        if item.Btn and item.Btn.Parent then
-            if item.Table[item.Name] then
-                item.Btn.BackgroundColor3 = CurrentThemeColor
-            else
-                item.Btn.BackgroundColor3 = UIColors.Background
-            end
-        end
-    end
-    
-    for _, item in pairs(ThemedAccessoryListBtns) do
-        if item.Btn and item.Btn.Parent then
-            if item.Table[item.Name] then
-                item.Btn.BackgroundColor3 = CurrentThemeColor
-            else
-                item.Btn.BackgroundColor3 = UIColors.Background
-            end
+task.spawn(function()
+    while task.wait(1) do
+        if Config.ShowWatermark then
+            local fps = math.floor(workspace:GetRealPhysicsFPS())
+            local ping = "0"
+            pcall(function() ping = tostring(math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())) end)
+            StatsLabel.Text = "FPS: " .. tostring(fps) .. " | PING: " .. ping .. "ms"
         end
     end
 end)
 
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode.Name == Config.ToggleKey then
-        MainFrame.Visible = not MainFrame.Visible
-        PlaySound(MainFrame.Visible)
-    end
-end)
+TranslateAllUI()
+SendNotification("System", "VI HOEP Loaded Successfully!", 3)
