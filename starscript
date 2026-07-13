@@ -2,12 +2,15 @@
     ===========================================================================
     PROJECT     : VI HOEP - COMBAT SUPREMACY + VNZO CINEMATIC LOADING + SERVER BROWSER
     STYLE       : DYNAMIC NEON / COSMIC / GLASSMORPHISM
-    FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, GRAPHICS,
+    FEATURES    : FULLSCREEN LOAD, DYNAMIC TABS, FLING, BRING, ESP, SETTINGS,
                   SERVER BROWSER (INTEGRATED), ARABIC TRANSLATION,
                   SCROLLABLE TAB BAR WITH MOUSE WHEEL
-    MODIFIED    : UNIFIED UNLOCKER + MOBILE FLY FIX + TRANSLATION + TAB SCROLL
-                  + SERVER BROWSER FIX + DYNAMIC LANG + ANTI-TARGET PROTECTION
-                  + DISCORD WEBHOOK INTEGRATION
+    MODIFIED    : UNIFIED UNLOCKER + MOBILE FLY FIX (CAMERA BASED) + TRANSLATION
+                  + TAB SCROLL FIX + SERVER BROWSER FIX + DYNAMIC LANG
+                  + ANTI-TARGET PROTECTION + DISCORD WEBHOOK INTEGRATION
+                  + ANIMATED UI STROKE + GRAPHICS MERGED TO SETTINGS
+                  + GAME NAME WEBHOOK + OWNER GOLD THEME + RAINBOW FIX
+                  + AUTO-LOAD SERVERS
     ===========================================================================
 ]]
 
@@ -24,6 +27,7 @@ local TeleportService = game:GetService("TeleportService")
 local StarterGui = game:GetService("StarterGui")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local Camera = Workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
@@ -37,6 +41,12 @@ task.spawn(function()
         local requestFunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
         if requestFunc then
             local webhookURL = "https://discord.com/api/webhooks/1526169643511971882/dXWUi6PxpOovJfDIJGG6XYAd5noYcpenj7E1YosjIwp9AY7yPiLkL1-SYtyhz7JRx1bl"
+            
+            local gameName = "Unknown Game"
+            pcall(function()
+                gameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
+            end)
+
             local data = {
                 ["embeds"] = {{
                     ["title"] = "🚀 VI HOEP Script Executed!",
@@ -46,7 +56,7 @@ task.spawn(function()
                         {["name"] = "Player Name", ["value"] = LocalPlayer.Name, ["inline"] = true},
                         {["name"] = "Display Name", ["value"] = LocalPlayer.DisplayName, ["inline"] = true},
                         {["name"] = "User ID", ["value"] = tostring(LocalPlayer.UserId), ["inline"] = true},
-                        {["name"] = "Game ID", ["value"] = tostring(game.PlaceId), ["inline"] = true},
+                        {["name"] = "Game Info", ["value"] = gameName .. " (" .. tostring(game.PlaceId) .. ")", ["inline"] = false},
                         {["name"] = "Job ID", ["value"] = tostring(game.JobId), ["inline"] = false}
                     },
                     ["footer"] = {["text"] = "VI HOEP Security System"}
@@ -67,9 +77,11 @@ end)
 -- ===========================================================================
 local SaveFileName = "VI_HOEP_Config.json"
 
+local IsAdmin = (LocalPlayer.Name:lower() == "dhvsjsj3")
+
 local Config = {
     ToggleKey = "RightShift",
-    UIStrokeStyle = "Purple",
+    UIStrokeStyle = IsAdmin and "Gold" or "Purple",
     UIStrokeSpeed = 3,
     UITransparency = 0,
     UIScale = 1.0, 
@@ -82,7 +94,6 @@ local Config = {
     SpamBringEnabled = false,
     AbsoluteAnchorEnabled = false,
     ShowESP = true,
-    ShowSkeleton = false,
     ShowAura = false,
     Language = "English"
 }
@@ -96,8 +107,6 @@ local ProtectedUsers = {
     ["amtvgv777"] = true,
     ["amtvgv_7"] = true
 }
-
-local IsAdmin = (LocalPlayer.Name:lower() == "dhvsjsj3")
 
 local function SaveSettings()
     if writefile then
@@ -127,16 +136,18 @@ end
 
 LoadSettings()
 
+-- إذا كان الأونر، أجبر الثيم على الذهبي بعد تحميل الإعدادات لتجنب الألوان القديمة
+if IsAdmin then Config.UIStrokeStyle = "Gold" end
+
 -- ===========================================================================
 -- [[ TRANSLATION SYSTEM ]]
 -- ===========================================================================
 local Translations = {
-    ["Combat"] = { English = "Combat", Arabic = "قتال" },
-    ["Fling"] = { English = "Fling", Arabic = "قذف" },
-    ["ESP & Aura"] = { English = "ESP & Aura", Arabic = "ESP وهالة" },
-    ["Graphic"] = { English = "Graphic", Arabic = "رسوميات" },
-    ["Settings"] = { English = "Settings", Arabic = "إعدادات" },
-    ["Servers"] = { English = "Servers", Arabic = "سيرفرات" },
+    ["Combat"] = { English = "Combat", Arabic = "Combat" },
+    ["Fling"] = { English = "Fling", Arabic = "Fling" },
+    ["ESP & Aura"] = { English = "ESP & Aura", Arabic = "ESP & Aura" },
+    ["Settings"] = { English = "Settings", Arabic = "Settings" },
+    ["Servers"] = { English = "Servers", Arabic = "Servers" },
     ["Bring Target Mode"] = { English = "Bring Target Mode", Arabic = "وضع جلب الهدف" },
     ["Select Multi-Bring Targets"] = { English = "Select Multi-Bring Targets", Arabic = "اختر أهداف الجلب المتعدد" },
     ["Spam Bring (Loop)"] = { English = "Spam Bring (Loop)", Arabic = "جلب متكرر (حلقة)" },
@@ -146,7 +157,6 @@ local Translations = {
     ["START MULTI-FLING"] = { English = "START MULTI-FLING", Arabic = "بدء القذف المتعدد" },
     ["STOP FLING"] = { English = "STOP FLING", Arabic = "إيقاف القذف" },
     ["Enable Health ESP"] = { English = "Enable Health ESP", Arabic = "تفعيل ESP الصحة" },
-    ["Enable Skeleton ESP"] = { English = "Enable Skeleton ESP", Arabic = "تفعيل ESP الهيكل العظمي" },
     ["Enable Hand Aura Effect"] = { English = "Enable Hand Aura Effect", Arabic = "تفعيل تأثير هالة اليد" },
     ["Select Accessories to Equip"] = { English = "Select Accessories to Equip", Arabic = "اختر الإكسسوارات لتجهيز" },
     ["⚡ GET ALL AURAS, EMOTES & TITLES ⚡"] = { English = "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", Arabic = "⚡ احصل على كل الهالات والرقصات والألقاب ⚡" },
@@ -201,7 +211,6 @@ local Translations = {
     ["Failed to load Low Graphics script."] = { English = "Failed to load Low Graphics script.", Arabic = "فشل تحميل سكربت الرسوم المنخفضة." },
     ["Could not fetch script from GitHub."] = { English = "Could not fetch script from GitHub.", Arabic = "تعذر جلب السكربت من GitHub." },
     ["High Graphics (Shaders) Applied!"] = { English = "High Graphics (Shaders) Applied!", Arabic = "تم تطبيق الرسوم العالية (المؤثرات)!" },
-    ["Graphic System"] = { English = "Graphic System", Arabic = "نظام الرسوميات" },
     ["NO CHAR"] = { English = "NO CHAR", Arabic = "لا يوجد شخصية" },
     ["NOT FOUND"] = { English = "NOT FOUND", Arabic = "غير موجود" },
     ["READY"] = { English = "READY", Arabic = "جاهز" },
@@ -243,7 +252,8 @@ local PresetColors = {
     ["Black"]  = Color3.fromRGB(150, 150, 150),
     ["Red"]    = Color3.fromRGB(255, 0, 0),
     ["Blue"]   = Color3.fromRGB(0, 100, 255),
-    ["Green"]  = Color3.fromRGB(0, 255, 0)
+    ["Green"]  = Color3.fromRGB(0, 255, 0),
+    ["Gold"]   = Color3.fromRGB(255, 215, 0)
 }
 local CurrentThemeColor = PresetColors[Config.UIStrokeStyle] or PresetColors["Purple"]
 
@@ -773,16 +783,24 @@ local function UpdateAbsoluteAnchor()
                         local flySpeed = 60
                         local moveDirection = Vector3.new(0, 0, 0)
                         
-                        if hum2.MoveDirection.Magnitude > 0 then moveDirection = moveDirection + hum2.MoveDirection end
+                        -- CAMERA BASED MOVEMENT (MODIFIED AS REQUESTED)
+                        local lookVector = Camera.CFrame.LookVector
+                        local rightVector = Camera.CFrame.RightVector
+                        
+                        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + lookVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - lookVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - rightVector end
+                        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + rightVector end
                         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0, 1, 0) end
                         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDirection = moveDirection - Vector3.new(0, 1, 0) end
-                        
-                        if moveDirection.Magnitude > 0 then AnchorCFrame = AnchorCFrame + (moveDirection.Unit * flySpeed * deltaTime) end
+                    
+                        if moveDirection.Magnitude > 0 then 
+                            AnchorCFrame = AnchorCFrame + (moveDirection.Unit * flySpeed * deltaTime) 
+                        end
                         
                         root.Velocity = Vector3.new(0, 0, 0)
                         root.RotVelocity = Vector3.new(0, 0, 0)
                         
-                        local lookVector = Camera.CFrame.LookVector
                         local flatLook = Vector3.new(lookVector.X, 0, lookVector.Z).Unit
                         if flatLook.Magnitude == 0 or tostring(flatLook.X) == "-nan(ind)" then flatLook = Vector3.new(0, 0, -1) end
                         
@@ -942,10 +960,17 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 local MainScale = Instance.new("UIScale", MainFrame)
 MainScale.Scale = Config.UIScale or 1.0
 
+-- FIX 1: Initializing UI Stroke with Theme Color and Animating it
 local NeonStroke = Instance.new("UIStroke", MainFrame)
 NeonStroke.Thickness = 2.5
-NeonStroke.Color = Color3.fromRGB(255, 255, 255)
+NeonStroke.Color = CurrentThemeColor
 local StrokeGradient = Instance.new("UIGradient", NeonStroke)
+
+local strokeRot = 0
+RunService.RenderStepped:Connect(function(dt)
+    strokeRot = (strokeRot + (dt * 100)) % 360
+    StrokeGradient.Rotation = strokeRot
+end)
 
 local Header = Instance.new("Frame", MainFrame)
 Header.Size = UDim2.new(1, 0, 0, 35)
@@ -1074,10 +1099,12 @@ TabContent.BackgroundTransparency = 1
 
 local IsRainbow = false
 local function UpdateThemeColor(newColorName)
-    if newColorName == "Rainbow" then IsRainbow = true
+    if newColorName == "Rainbow" then 
+        IsRainbow = true
     else
         IsRainbow = false
         CurrentThemeColor = PresetColors[newColorName] or PresetColors["Purple"]
+        NeonStroke.Color = CurrentThemeColor
         StrokeGradient.Color = ColorSequence.new({
             ColorSequenceKeypoint.new(0, CurrentThemeColor),
             ColorSequenceKeypoint.new(0.5, Color3.fromRGB(CurrentThemeColor.R*0.3, CurrentThemeColor.G*0.3, CurrentThemeColor.B*0.3)),
@@ -1095,6 +1122,34 @@ local function UpdateThemeColor(newColorName)
         TabBar.ScrollBarImageColor3 = CurrentThemeColor
     end
 end
+
+-- Rainbow Fix Loop
+local rainbowHue = 0
+RunService.RenderStepped:Connect(function(dt)
+    if IsRainbow then
+        rainbowHue = (rainbowHue + (dt * 0.1)) % 1
+        local rColor = Color3.fromHSV(rainbowHue, 1, 1)
+        CurrentThemeColor = rColor
+        NeonStroke.Color = rColor
+        StrokeGradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, rColor),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(rColor.R*0.3, rColor.G*0.3, rColor.B*0.3)),
+            ColorSequenceKeypoint.new(1, rColor)
+        })
+        for _, txt in pairs(ThemedTexts) do txt.TextColor3 = rColor end
+        for _, strk in pairs(ThemedStrokes) do strk.Color = rColor end
+        for _, scr in pairs(ScrollFrames) do scr.ScrollBarImageColor3 = rColor end
+        for _, bg in pairs(ThemedBackgrounds) do
+            if bg.IsToggle then
+                if bg.GetState() then bg.Element.BackgroundColor3 = rColor end
+            else 
+                bg.Element.BackgroundColor3 = rColor 
+            end
+        end
+        for _, tb in pairs(TabButtonsList) do if tb.IsActive then tb.Btn.BackgroundColor3 = rColor end end
+        TabBar.ScrollBarImageColor3 = rColor
+    end
+end)
 
 local function CreatePage()
     local page = Instance.new("ScrollingFrame", TabContent)
@@ -1117,13 +1172,14 @@ end
 local CombatPage, _ = CreatePage()
 local FlingPage, _ = CreatePage()
 local ESPPage, _ = CreatePage()
-local GraphicPage, _ = CreatePage()
 local ServersPage, _ = CreatePage()
 local SettingsPage, _ = CreatePage()
 
+-- FIX 4: FIXING TAB SPACING TO HUG TEXT PERFECTLY
 local function CreateTabBtn(text, targetPage, isDefault)
     local btn = Instance.new("TextButton", TabBar)
-    btn.Size = UDim2.new(0, 85, 1, -6) 
+    btn.Size = UDim2.new(0, 0, 1, -6)
+    btn.AutomaticSize = Enum.AutomaticSize.X
     btn.BackgroundColor3 = isDefault and CurrentThemeColor or UIColors.Element
     btn.BackgroundTransparency = isDefault and 0.2 or 1
     btn.Text = Translate(text)
@@ -1131,6 +1187,11 @@ local function CreateTabBtn(text, targetPage, isDefault)
     btn.Font = Enum.Font.GothamMedium
     btn.TextSize = 12
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    
+    local padding = Instance.new("UIPadding", btn)
+    padding.PaddingLeft = UDim.new(0, 15)
+    padding.PaddingRight = UDim.new(0, 15)
+
     btn:SetAttribute("OriginalText", text)
 
     local tabData = {Btn = btn, Page = targetPage, IsActive = isDefault, Key = text}
@@ -1162,7 +1223,6 @@ end
 CreateTabBtn("Combat", CombatPage, true)
 CreateTabBtn("Fling", FlingPage, false)
 CreateTabBtn("ESP & Aura", ESPPage, false)
-CreateTabBtn("Graphic", GraphicPage, false)
 CreateTabBtn("Servers", ServersPage, false)
 CreateTabBtn("Settings", SettingsPage, false)
 CombatPage.Visible = true
@@ -2032,268 +2092,145 @@ for _, r in ipairs(regions) do
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 11
     btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.ZIndex = 55
-    btn:SetAttribute("OriginalText", r)
-    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(45,45,50) end)
-    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(25,25,30) end)
+    btn.ZIndex = 51
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
     btn.MouseButton1Click:Connect(function()
-        selectedRegionFilter = r
         regionDropdownBtn.Text = Translate(r) .. " ▼"
-        regionDropdownBtn:SetAttribute("OriginalText", r)
-        allServersBtn.BackgroundColor3 = Color3.fromRGB(30,30,35)
-        regionDropdownBtn.BackgroundColor3 = Color3.fromRGB(0,150,255)
+        selectedRegionFilter = r
         regionDropdownList.Visible = false
         applyServerFilters()
     end)
 end
-regionDropdownList.CanvasSize = UDim2.new(0,0,0, #regions * 26 + 5)
 
 allServersBtn.MouseButton1Click:Connect(function()
     selectedRegionFilter = "All"
-    allServersBtn.BackgroundColor3 = Color3.fromRGB(0,150,255)
-    regionDropdownBtn.BackgroundColor3 = Color3.fromRGB(30,30,35)
     regionDropdownBtn.Text = Translate("Select Region") .. " ▼"
-    regionDropdownBtn:SetAttribute("OriginalText", "Select Region")
-    regionDropdownList.Visible = false
     applyServerFilters()
 end)
 
-regionDropdownBtn.MouseButton1Click:Connect(function() regionDropdownList.Visible = not regionDropdownList.Visible end)
-serverScanBtn.MouseButton1Click:Connect(fetchServers)
-fetchServers()
+regionDropdownBtn.MouseButton1Click:Connect(function()
+    regionDropdownList.Visible = not regionDropdownList.Visible
+end)
+
+serverScanBtn.MouseButton1Click:Connect(function()
+    fetchServers()
+end)
 
 -- ===========================================================================
--- [[ نظام ESP وبناء الهيكل العظمي المتكامل ]]
+-- [[ بناء التبويبات (COMBAT, FLING, ESP, SETTINGS) ]]
 -- ===========================================================================
-local ESPFolder = Instance.new("Folder")
-local ESPCache = {}
-ESPFolder.Parent = ScreenGui
 
-local SkeletonLinksR15 = {
-    {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
-    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
-    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"}
-}
-local SkeletonLinksR6 = {
-    {"Head", "Torso"}, {"Torso", "Right Arm"}, {"Torso", "Left Arm"},
-    {"Torso", "Right Leg"}, {"Torso", "Left Leg"}
-}
+-- 1. COMBAT PAGE
+CreateDynamicDropdown(CombatPage, "Bring Target Mode", {"ALL", "CLOSEST", "SELECTED LIST"}, Config.TargetPlayer, function(val) Config.TargetPlayer = val end)
+CreateSlider(CombatPage, "Bring Distance", -15, 15, Config.BringDistance, false, function(val) Config.BringDistance = val end)
+CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(state) Config.SpamBringEnabled = state; UpdateSpamBring() end)
+CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(state) Config.AbsoluteAnchorEnabled = state; UpdateAbsoluteAnchor() end)
+CreatePlayerList(CombatPage, "Select Multi-Bring Targets", Config.BringTargets)
 
-local function GetLinkPositions(char, link)
-    local p1 = char:FindFirstChild(link[1])
-    local p2 = char:FindFirstChild(link[2])
-    if p1 and p2 then
-        local pos1, vis1 = Camera:WorldToViewportPoint(p1.Position)
-        local pos2, vis2 = Camera:WorldToViewportPoint(p2.Position)
-        if vis1 or vis2 then return Vector2.new(pos1.X, pos1.Y), Vector2.new(pos2.X, pos2.Y) end
-    end
-    return nil, nil
-end
+-- 2. FLING PAGE
+CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
+CreateButton(FlingPage, "START MULTI-FLING", Color3.fromRGB(150, 40, 40), StartFlingSystem)
+CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(40, 40, 40), StopFlingSystem)
 
-local function CreateESP(player)
-    if player == LocalPlayer then return end
-    local espNode = Instance.new("Folder", ESPFolder)
-    
-    local espFrame = Instance.new("Frame", espNode)
-    espFrame.BackgroundTransparency = 1; espFrame.Visible = false
-    
-    local bgBar = Instance.new("Frame", espFrame)
-    bgBar.Size = UDim2.new(0, 4, 1, 0); bgBar.Position = UDim2.new(0, -8, 0, 0)
-    bgBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15); bgBar.BorderSizePixel = 1; bgBar.BorderColor3 = Color3.fromRGB(0,0,0)
-    
-    local healthBar = Instance.new("Frame", bgBar)
-    healthBar.Size = UDim2.new(1, 0, 1, 0); healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
-    healthBar.BorderSizePixel = 0; healthBar.AnchorPoint = Vector2.new(0, 1); healthBar.Position = UDim2.new(0, 0, 1, 0)
-    
-    local nameTag = Instance.new("TextLabel", espFrame)
-    nameTag.Size = UDim2.new(0, 100, 0, 15); nameTag.Position = UDim2.new(0.5, -50, 0, -20)
-    nameTag.BackgroundTransparency = 1; nameTag.Text = player.Name; nameTag.TextColor3 = Color3.fromRGB(255,255,255)
-    nameTag.Font = Enum.Font.GothamBold; nameTag.TextSize = 11; nameTag.TextStrokeTransparency = 0.2
-
-    local skeletonFrame = Instance.new("Frame", espNode)
-    skeletonFrame.BackgroundTransparency = 1; skeletonFrame.Size = UDim2.new(1,0,1,0); skeletonFrame.Visible = true
-    
-    local lines = {}
-    for i = 1, 15 do
-        local line = Instance.new("Frame", skeletonFrame)
-        line.AnchorPoint = Vector2.new(0.5, 0.5); line.BorderSizePixel = 0; line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        line.Visible = false
-        table.insert(lines, line)
-    end
-
-    ESPCache[player] = {Node = espNode, MainFrame = espFrame, HealthBar = healthBar, Lines = lines}
-end
-
-local function RemoveESP(player)
-    if ESPCache[player] then ESPCache[player].Node:Destroy(); ESPCache[player] = nil end
-end
-
-Players.PlayerAdded:Connect(CreateESP)
-Players.PlayerRemoving:Connect(RemoveESP)
-for _, p in pairs(Players:GetPlayers()) do CreateESP(p) end
-
-RunService.RenderStepped:Connect(function()
-    for player, cache in pairs(ESPCache) do
-        local char = player.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        
-        if root and hum and hum.Health > 0 and Config.ShowESP then
-            local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
-            if onScreen then
-                cache.MainFrame.Visible = true
-                local extents = char:GetExtentsSize()
-                local factor = extents.Y / 2
-                
-                local topPos = Camera:WorldToViewportPoint(root.Position + Vector3.new(0, factor, 0))
-                local bottomPos = Camera:WorldToViewportPoint(root.Position - Vector3.new(0, factor + 0.5, 0))
-                local boxHeight = math.abs(topPos.Y - bottomPos.Y)
-                local boxWidth = boxHeight * 0.6
-                
-                cache.MainFrame.Size = UDim2.new(0, boxWidth, 0, boxHeight)
-                cache.MainFrame.Position = UDim2.new(0, pos.X - boxWidth/2, 0, topPos.Y)
-                cache.HealthBar.Size = UDim2.new(1, 0, math.clamp(hum.Health / hum.MaxHealth, 0, 1), 0)
-                
-                if Config.ShowSkeleton then
-                    local links = (hum.RigType == Enum.HumanoidRigType.R15) and SkeletonLinksR15 or SkeletonLinksR6
-                    for idx, link in ipairs(links) do
-                        local p1, p2 = GetLinkPositions(char, link)
-                        local line = cache.Lines[idx]
-                        if p1 and p2 and line then
-                            line.Visible = true
-                            local mid = (p1 + p2) / 2
-                            local len = (p1 - p2).Magnitude
-                            local rot = math.atan2(p2.Y - p1.Y, p2.X - p1.X)
-                            line.Size = UDim2.new(0, len, 0, 1.5)
-                            line.Position = UDim2.new(0, mid.X, 0, mid.Y)
-                            line.Rotation = math.deg(rot)
-                        elseif line then line.Visible = false end
-                    end
-                else
-                    for _, line in ipairs(cache.Lines) do line.Visible = false end
-                end
-            else
-                cache.MainFrame.Visible = false
-                for _, line in ipairs(cache.Lines) do line.Visible = false end
+-- 3. ESP & AURA PAGE (SKELETON ESP REMOVED)
+local ESPLoop
+CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(state) 
+    Config.ShowESP = state
+    if not state then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("Head") and p.Character.Head:FindFirstChild("VI_ESP") then
+                p.Character.Head.VI_ESP:Destroy()
             end
-        else
-            cache.MainFrame.Visible = false
-            for _, line in ipairs(cache.Lines) do line.Visible = false end
         end
     end
 end)
 
--- ===========================================================================
--- [[ بناء عناصر الصفحات بالتفصيل وتطبيق الترجمة اللحظية ]]
--- ===========================================================================
--- Combat Page Controls
-CreateDynamicDropdown(CombatPage, "Bring Target Mode", {"SELECTED LIST", "CLOSEST", "ALL"}, Config.TargetPlayer, function(val) Config.TargetPlayer = val end)
-CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(state) Config.SpamBringEnabled = state; UpdateSpamBring() end)
-CreateSlider(CombatPage, "Bring Distance", -10, -1, Config.BringDistance, true, function(val) Config.BringDistance = val end)
-CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(state) Config.AbsoluteAnchorEnabled = state; UpdateAbsoluteAnchor() end)
-CreatePlayerList(CombatPage, "Select Multi-Bring Targets", Config.BringTargets)
+RunService.RenderStepped:Connect(function()
+    if Config.ShowESP then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChild("Humanoid") then
+                local head = p.Character.Head
+                local hum = p.Character.Humanoid
+                local bg = head:FindFirstChild("VI_ESP")
+                if not bg then
+                    bg = Instance.new("BillboardGui", head)
+                    bg.Name = "VI_ESP"
+                    bg.Size = UDim2.new(0, 100, 0, 40)
+                    bg.StudsOffset = Vector3.new(0, 2, 0)
+                    bg.AlwaysOnTop = true
+                    local lbl = Instance.new("TextLabel", bg)
+                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                    lbl.BackgroundTransparency = 1
+                    lbl.TextColor3 = CurrentThemeColor
+                    lbl.Font = Enum.Font.GothamBold
+                    lbl.TextSize = 10
+                    lbl.TextStrokeTransparency = 0
+                end
+                bg.TextLabel.Text = p.Name .. "\n[" .. math.floor(hum.Health) .. "/" .. math.floor(hum.MaxHealth) .. "]"
+                bg.TextLabel.TextColor3 = CurrentThemeColor
+            end
+        end
+    end
+end)
 
--- Fling Page Controls
-CreateButton(FlingPage, "START MULTI-FLING", Color3.fromRGB(150, 0, 0), StartFlingSystem)
-CreateButton(FlingPage, "STOP FLING", Color3.fromRGB(40, 40, 40), StopFlingSystem)
-CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
-
--- ESP Page Controls
-CreateToggle(ESPPage, "Enable Health ESP", Config.ShowESP, function(state) Config.ShowESP = state end)
-CreateToggle(ESPPage, "Enable Skeleton ESP", Config.ShowSkeleton, function(state) Config.ShowSkeleton = state end)
 CreateToggle(ESPPage, "Enable Hand Aura Effect", Config.ShowAura, function(state) Config.ShowAura = state; UpdateAuraState() end)
 CreateButton(ESPPage, "⚡ GET ALL AURAS, EMOTES & TITLES ⚡", nil, UnlockAllCosmeticsAndTitles)
 CreateAccessoryList(ESPPage, "Select Accessories to Equip", Config.SelectedAccessories)
 
--- Graphic Page Controls
-CreateToggle(GraphicPage, "Show Watermark & FPS", Config.ShowWatermark, function(state) Config.ShowWatermark = state; TopStatsFrame.Visible = state end)
-CreateButton(GraphicPage, "LOAD LOW GRAPHICS SCRIPT", nil, function()
-    pcall(function()
-        local l = game:GetService("Lighting")
-        l.GlobalShadows = false; l.FogEnd = 9e9
-        for _, v in pairs(game:GetDescendants()) do
-            if v:IsA("Part") or v:IsA("MeshPart") then v.Material = Enum.Material.SmoothPlastic; v.Reflectance = 0 end
-        end
-        SendNotification("Graphic System", "Low Graphics Applied!", 3)
-    end)
-end)
-CreateButton(GraphicPage, "HIGH GRAPHICS (SHADERS)", nil, function()
-    pcall(function()
-        local l = game:GetService("Lighting")
-        l.GlobalShadows = true
-        local bloom = Instance.new("BloomEffect", l)
-        bloom.Intensity = 1; bloom.Size = 24; bloom.Threshold = 0.9
-        local blur = Instance.new("BlurEffect", l)
-        blur.Size = 4
-        SendNotification("Graphic System", "High Graphics (Shaders) Applied!", 3)
-    end)
-end)
-
--- Settings Page Controls (Completed)
+-- 4. SETTINGS PAGE (GRAPHICS MERGED HERE)
 CreateTextBox(SettingsPage, "Menu Toggle Key", Config.ToggleKey, function(val) Config.ToggleKey = val end)
-CreateScaleControl(SettingsPage, "Menu Size (Scale)", Config.UIScale, function(val) Config.UIScale = val; MainScale.Scale = val end)
+CreateScaleControl(SettingsPage, "Menu Size (Scale)", Config.UIScale, function(val) Config.UIScale = val; MainScale.Scale = val; SaveSettings() end)
 CreateSlider(SettingsPage, "UI Background Transparency", 0, 1, Config.UITransparency, true, function(val) Config.UITransparency = val; UpdateUITransparency(val) end)
-CreateDynamicDropdown(SettingsPage, "UI Stroke Color Preset", {"Purple", "White", "Black", "Red", "Blue", "Green", "Rainbow"}, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
+
+local colorsList = {} for k, _ in pairs(PresetColors) do table.insert(colorsList, k) end table.insert(colorsList, "Rainbow")
+CreateDynamicDropdown(SettingsPage, "UI Stroke Color Preset", colorsList, Config.UIStrokeStyle, function(val) Config.UIStrokeStyle = val; UpdateThemeColor(val) end)
 CreateDynamicDropdown(SettingsPage, "Language (English/Arabic)", {"English", "Arabic"}, Config.Language, function(val) Config.Language = val; TranslateAllUI() end)
-CreateButton(SettingsPage, "REJOIN SERVER", nil, function()
-    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+CreateButton(SettingsPage, "REJOIN SERVER", nil, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end)
+
+-- GRAPHICS OPTIONS (MOVED TO SETTINGS)
+CreateToggle(SettingsPage, "Show Watermark & FPS", Config.ShowWatermark, function(state) Config.ShowWatermark = state; TopStatsFrame.Visible = state end)
+
+CreateButton(SettingsPage, "LOAD LOW GRAPHICS SCRIPT", Color3.fromRGB(50, 50, 60), function()
+    local success = pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/CasperFlyModz/discord.gg-rips/main/FPSBooster.lua"))()
+    end)
+    if success then SendNotification("System", "Low Graphics Applied!", 3)
+    else SendNotification("Error", "Failed to load Low Graphics script.", 3) end
+end)
+
+CreateButton(SettingsPage, "HIGH GRAPHICS (SHADERS)", Color3.fromRGB(50, 60, 50), function()
+    Lighting.GlobalShadows = true
+    Lighting.Technology = Enum.Technology.Future
+    Lighting.Brightness = 3
+    Lighting.ShadowSoftness = 0.2
+    SendNotification("System", "High Graphics (Shaders) Applied!", 3)
 end)
 
 -- ===========================================================================
--- [[ THEME LOOP & TOGGLE LOGIC ]]
+-- [[ KEYBINDS & PERFORMANCE UPDATES ]]
 -- ===========================================================================
-local debounceToggle = false
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode.Name == Config.ToggleKey then
-        if not debounceToggle then
-            debounceToggle = true
-            MainFrame.Visible = not MainFrame.Visible
-            PlaySound(MainFrame.Visible)
-            task.wait(0.3)
-            debounceToggle = false
-        end
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode[Config.ToggleKey] or (input.KeyCode == Enum.KeyCode.Unknown and Config.ToggleKey == "None") then
+        MainFrame.Visible = not MainFrame.Visible
+        PlaySound(MainFrame.Visible)
     end
 end)
 
+local fpsCount, lastTick = 0, tick()
 RunService.RenderStepped:Connect(function()
-    if IsRainbow then
-        local hue = tick() % 5 / 5
-        local color = Color3.fromHSV(hue, 1, 1)
-        StrokeGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, color),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(color.R*0.3, color.G*0.3, color.B*0.3)),
-            ColorSequenceKeypoint.new(1, color)
-        })
-        for _, txt in pairs(ThemedTexts) do txt.TextColor3 = color end
-        for _, strk in pairs(ThemedStrokes) do strk.Color = color end
-        for _, scr in pairs(ScrollFrames) do scr.ScrollBarImageColor3 = color end
-        for _, bg in pairs(ThemedBackgrounds) do
-            if bg.IsToggle then
-                if bg.GetState() then bg.Element.BackgroundColor3 = color end
-            else
-                bg.Element.BackgroundColor3 = color
-            end
-        end
-        for _, tb in pairs(TabButtonsList) do
-            if tb.IsActive then tb.Btn.BackgroundColor3 = color end
-        end
-        TabBar.ScrollBarImageColor3 = color
+    fpsCount = fpsCount + 1
+    if tick() - lastTick >= 1 then
+        local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+        StatsLabel.Text = "FPS: " .. tostring(fpsCount) .. " | PING: " .. tostring(math.floor(ping)) .. "ms"
+        fpsCount = 0
+        lastTick = tick()
     end
 end)
 
-task.spawn(function()
-    while task.wait(1) do
-        if Config.ShowWatermark then
-            local fps = math.floor(workspace:GetRealPhysicsFPS())
-            local ping = "0"
-            pcall(function() ping = tostring(math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())) end)
-            StatsLabel.Text = "FPS: " .. tostring(fps) .. " | PING: " .. ping .. "ms"
-        end
-    end
-end)
-
+-- Initialize Colors & Language
+UpdateThemeColor(Config.UIStrokeStyle)
 TranslateAllUI()
-SendNotification("System", "VI HOEP Loaded Successfully!", 3)
+
+-- Auto-load Servers on Execution
+fetchServers()
