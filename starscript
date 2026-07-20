@@ -13,6 +13,7 @@
                   + GAME NAME IN WEBHOOK (NAME + ID)
                   + REJOIN (PRIVATE SERVER) + KILL SCRIPT + HEALTH ESP + AUTO EQUIP
                   + ADMIN TOGGLE FIX + REAL-TIME COLOR UPDATE + AUTO SERVERS
+                  + PLAYER TAB (INF JUMP, NOCLIP, WALK SPEED, SPEED TOGGLE)
     ===========================================================================
 ]]
 
@@ -122,6 +123,7 @@ LoadSettings()
 -- ===========================================================================
 local Translations = {
     ["Combat"] = { English = "Combat", Arabic = "Combat" },
+    ["Player"] = { English = "Player", Arabic = "اللاعب" },
     ["Fling"] = { English = "Fling", Arabic = "Fling" },
     ["AURA"] = { English = "AURA", Arabic = "AURA" },
     ["ESP"] = { English = "ESP", Arabic = "ESP" },
@@ -187,7 +189,12 @@ local Translations = {
     ["NO CHAR"] = { English = "NO CHAR", Arabic = "لا يوجد شخصية" },
     ["NOT FOUND"] = { English = "NOT FOUND", Arabic = "غير موجود" },
     ["READY"] = { English = "READY", Arabic = "جاهز" },
-    ["Protected User - Access Denied"] = { English = "Protected User - Access Denied", Arabic = "لاعب محمي - تم رفض الوصول" }
+    ["Protected User - Access Denied"] = { English = "Protected User - Access Denied", Arabic = "لاعب محمي - تم رفض الوصول" },
+    -- NEW PLAYER TAB TRANSLATIONS
+    ["Infinite Jump"] = { English = "Infinite Jump", Arabic = "قفز لا نهائي" },
+    ["Noclip (Wall Hack)"] = { English = "Noclip (Wall Hack)", Arabic = "اختراق الجدران" },
+    ["Walk Speed"] = { English = "Walk Speed", Arabic = "سرعة الحركة" },
+    ["Speed Hack"] = { English = "Speed Hack", Arabic = "تسريع الحركة" },
 }
 
 local function Translate(text)
@@ -1053,7 +1060,6 @@ NeonStroke.Color = CurrentThemeColor
 local StrokeGradient = Instance.new("UIGradient", NeonStroke)
 
 local strokeRot = 0
--- FIX 3: Rainbow Border continuous loop fix
 RunService.RenderStepped:Connect(function(dt)
     if IsRainbow then
         local colors = {}
@@ -1192,7 +1198,6 @@ TabContent.Size = UDim2.new(1, 0, 1, -70)
 TabContent.Position = UDim2.new(0, 0, 0, 70)
 TabContent.BackgroundTransparency = 1
 
--- FIX 2: Dynamic theme update including Active Trails instantly
 local function UpdateThemeColor(newColorName)
     if newColorName == "Rainbow" then
         IsRainbow = true
@@ -1216,7 +1221,6 @@ local function UpdateThemeColor(newColorName)
         for _, tb in pairs(TabButtonsList) do if tb.IsActive then tb.Btn.BackgroundColor3 = CurrentThemeColor end end
         TabBar.ScrollBarImageColor3 = CurrentThemeColor
         
-        -- Update trails immediately
         for _, trail in ipairs(ActiveTrails) do
             if trail and trail.Parent then
                 trail.Color = ColorSequence.new(CurrentThemeColor)
@@ -1244,6 +1248,7 @@ local function CreatePage()
 end
 
 local CombatPage, _ = CreatePage()
+local PlayerPage, _ = CreatePage()  -- NEW PAGE
 local FlingPage, _ = CreatePage()
 local AuraPage, _ = CreatePage()
 local ESPPage, _ = CreatePage()
@@ -1295,6 +1300,7 @@ local function CreateTabBtn(text, targetPage, isDefault)
 end
 
 CreateTabBtn("Combat", CombatPage, true)
+CreateTabBtn("Player", PlayerPage, false)  -- NEW TAB
 CreateTabBtn("Fling", FlingPage, false)
 CreateTabBtn("AURA", AuraPage, false)
 CreateTabBtn("ESP", ESPPage, false)
@@ -1856,7 +1862,7 @@ local function UnlockAllCosmeticsAndTitles()
 end
 
 -- ===========================================================================
--- [[ SERVER BROWSER SYSTEM (FIX 1: Auto Scan & No Regions) ]]
+-- [[ SERVER BROWSER SYSTEM ]]
 -- ===========================================================================
 local function getDetailedRegion(ping, jobId)
     if not ping then return "Unknown", "❓" end
@@ -2063,7 +2069,6 @@ serverScanBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- الاستدعاء التلقائي للسيرفرات
 task.spawn(function() task.wait(1); fetchServers() end)
 
 -- ===========================================================================
@@ -2097,6 +2102,59 @@ CreateToggle(CombatPage, "Spam Bring (Loop)", Config.SpamBringEnabled, function(
 CreateSlider(CombatPage, "Bring Distance", -15, 15, Config.BringDistance, true, function(val) Config.BringDistance = val end)
 CreateToggle(CombatPage, "Absolute Anchor (Freeze/Fly)", Config.AbsoluteAnchorEnabled, function(state) Config.AbsoluteAnchorEnabled = state; UpdateAbsoluteAnchor() end)
 
+-- ===========================================================================
+-- [[ PLAYER PAGE (NEW) ]] 
+-- ===========================================================================
+local InfJumpEnabled = false
+UserInputService.JumpRequest:Connect(function()
+    if InfJumpEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+    end
+end)
+CreateToggle(PlayerPage, "Infinite Jump", false, function(state) InfJumpEnabled = state end)
+
+local NoclipEnabled = false
+RunService.Stepped:Connect(function()
+    if NoclipEnabled and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+CreateToggle(PlayerPage, "Noclip (Wall Hack)", false, function(state) NoclipEnabled = state end)
+
+-- Speed Hack Toggle (activate/deactivate speed modification)
+local SpeedHackEnabled = false
+CreateToggle(PlayerPage, "Speed Hack", false, function(state)
+    SpeedHackEnabled = state
+    if not state then
+        -- Reset to default speed
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+        end
+        WalkSpeedVal = 16
+        -- Update slider display? The slider's text will show the current value when moved, but we can't update it here easily.
+        -- We'll rely on the slider callback to update the displayed value.
+    end
+end)
+
+local WalkSpeedVal = 16
+CreateSlider(PlayerPage, "Walk Speed", 16, 300, 16, false, function(val)
+    WalkSpeedVal = val
+    if SpeedHackEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = val
+    end
+end)
+
+-- Loop to keep WalkSpeed applied when Speed Hack is on
+RunService.RenderStepped:Connect(function()
+    if SpeedHackEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = WalkSpeedVal
+    end
+end)
+
 -- FLING PAGE
 CreatePlayerList(FlingPage, "Select Targets to Fling", Config.FlingTargets)
 CreateButton(FlingPage, "START MULTI-FLING", CurrentThemeColor, StartFlingSystem)
@@ -2126,7 +2184,6 @@ CreateDynamicDropdown(SettingsPage, "Language (English/Arabic)", {"English", "Ar
     TranslateAllUI()
 end)
 
--- FIX 4: Admin Toggle logic
 if OriginalAdminStatus then
     CreateToggle(SettingsPage, "Admin Mode (Gold Theme)", getgenv().AdminModeActive, function(state)
         getgenv().AdminModeActive = state
@@ -2138,7 +2195,6 @@ if OriginalAdminStatus then
             strokeDropdown:SetText(Config.UIStrokeStyle)
         end
     end)
-    -- جعل اللون ذهبي فوراً عند التشغيل
     task.spawn(function()
         task.wait(0.5)
         UpdateThemeColor("Gold")
